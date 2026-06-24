@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SET50 Options Dashboard — S50M26</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg2: #161b22;
+    --bg3: #21262d;
+    --border: rgba(255,255,255,0.08);
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --text3: #484f58;
+    --blue: #378ADD;
+    --red: #E24B4A;
+    --green: #1D9E75;
+    --amber: #BA7517;
+    --yellow: #f0c040;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  header { border-bottom: 1px solid var(--border); padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .logo { font-size: 15px; font-weight: 500; letter-spacing: .02em; }
+  .logo span { color: var(--blue); }
+  .header-right { font-size: 12px; color: var(--text2); }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
+
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+  .mc { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: .85rem 1rem; }
+  .mc-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+  .mc-val { font-size: 22px; font-weight: 500; }
+  .mc-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+  .tab-bar { display: flex; gap: 4px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .tab { font-size: 12px; padding: 5px 14px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; transition: all .15s; }
+  .tab:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
+  .tab.on { background: var(--bg3); color: var(--text); border-color: rgba(255,255,255,0.2); }
+
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
+  .card-title { font-size: 12px; color: var(--text2); margin-bottom: .75rem; font-weight: 500; }
+  .chart-wrap { position: relative; width: 100%; height: 280px; }
+
+  .legend { display: flex; gap: 14px; font-size: 11px; color: var(--text2); margin-bottom: 8px; flex-wrap: wrap; }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  .insight-bar { display: flex; gap: 1rem; flex-wrap: wrap; background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: .75rem 1rem; font-size: 12px; color: var(--text2); margin-top: .5rem; }
+  .insight-bar strong { color: var(--text); }
+
+  .date-sel { font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); cursor: pointer; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+  footer { text-align: center; padding: 2rem 1rem; font-size: 11px; color: var(--text3); border-top: 1px solid var(--border); margin-top: 2rem; }
+
+  @media (max-width: 600px) {
+    .grid2 { grid-template-columns: 1fr; }
+    .metrics { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">SET50 Options <span>Dashboard</span></div>
+  <div class="header-right">
+    <select class="date-sel" id="dateSel" onchange="onDateChange()">
+      <option value="0">18 มีค 67</option>
+      <option value="1">19 มีค 67</option>
+      <option value="2" selected>20 มีค 67</option>
+      <option value="3">21 มีค 67</option>
+      <option value="4">22 มีค 67</option>
+      <option value="5">25 มีค 67</option>
+    </select>
+    &nbsp;· S50M24 · EOD Data
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="metrics">
+    <div class="mc"><div class="mc-label">Max Pain</div><div class="mc-val" id="m-mp">—</div><div class="mc-sub">Strike ที่ Seller เจ็บน้อยสุด</div></div>
+    <div class="mc"><div class="mc-label">Put/Call Ratio</div><div class="mc-val" id="m-pcr">—</div><div class="mc-sub" id="m-sent">—</div></div>
+    <div class="mc"><div class="mc-label">Total Call OI</div><div class="mc-val" id="m-coi">—</div><div class="mc-sub">สัญญา</div></div>
+    <div class="mc"><div class="mc-label">Total Put OI</div><div class="mc-val" id="m-poi">—</div><div class="mc-sub">สัญญา</div></div>
+    <div class="mc"><div class="mc-label">IV Skew (ATM)</div><div class="mc-val" id="m-skew">—</div><div class="mc-sub" id="m-skew-s">—</div></div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab on" onclick="showTab('oi',this)">OI by Strike</button>
+    <button class="tab" onclick="showTab('maxpain',this)">Max Pain</button>
+    <button class="tab" onclick="showTab('iv',this)">IV Smile</button>
+    <button class="tab" onclick="showTab('vol',this)">Volatility Scatter</button>
+    <button class="tab" onclick="showTab('trend',this)">OI Trend</button>
+  </div>
+
+  <div id="pane-oi" class="card">
+    <div class="card-title">Open Interest — Call vs Put by Strike</div>
+    <div class="legend">
+      <span><span class="dot" style="background:#378ADD;"></span>Call OI</span>
+      <span><span class="dot" style="background:#E24B4A;"></span>Put OI</span>
+      <span><span class="dot" style="background:transparent;border:1.5px dashed #f0c040;width:16px;height:0;"></span>Max Pain</span>
+    </div>
+    <div class="chart-wrap"><canvas id="cOI" role="img" aria-label="Call vs Put OI by Strike"></canvas></div>
+  </div>
+
+  <div id="pane-maxpain" class="card" style="display:none;">
+    <div class="card-title">Max Pain — Pain Value by Strike (ต่ำสุด = Max Pain)</div>
+    <div class="legend"><span><span class="dot" style="background:#BA7517;"></span>Pain Value</span><span><span class="dot" style="background:#E24B4A;"></span>Max Pain Strike</span></div>
+    <div class="chart-wrap"><canvas id="cMP" role="img" aria-label="Max Pain by Strike"></canvas></div>
+  </div>
+
+  <div id="pane-iv" class="card" style="display:none;">
+    <div class="card-title">IV Smile — Implied Volatility ตาม Strike</div>
+    <div class="legend"><span><span class="dot" style="background:#1D9E75;"></span>Call IV</span><span><span class="dot" style="background:#D85A30;"></span>Put IV</span></div>
+    <div class="chart-wrap"><canvas id="cIV" role="img" aria-label="IV Smile Chart"></canvas></div>
+  </div>
+
+  <div id="pane-vol" class="card" style="display:none;">
+    <div class="card-title">Volatility Scatter — IV กระจายตาม Strike</div>
+    <div class="legend"><span><span class="dot" style="background:#378ADD;border-radius:50%;"></span>Call IV</span><span><span class="dot" style="background:#E24B4A;border-radius:50%;"></span>Put IV</span></div>
+    <div class="chart-wrap"><canvas id="cVol" role="img" aria-label="Volatility Scatter"></canvas></div>
+  </div>
+
+  <div id="pane-trend" class="card" style="display:none;">
+    <div class="card-title">OI Trend รายวัน — Call OI Strike หลัก (18–25 มีค)</div>
+    <div class="legend">
+      <span><span class="dot" style="background:#378ADD;"></span>Strike 875</span>
+      <span><span class="dot" style="background:#E24B4A;"></span>Strike 900</span>
+      <span><span class="dot" style="background:#1D9E75;"></span>Strike 850</span>
+    </div>
+    <div class="chart-wrap"><canvas id="cTrend" role="img" aria-label="OI Trend over days"></canvas></div>
+  </div>
+
+  <div class="insight-bar">
+    <span><strong id="ins-mp">—</strong> → แนวโน้มราคาช่วง Expiry</span>
+    <span><strong id="ins-pcr">—</strong> → Sentiment</span>
+    <span><strong>IV Skew</strong> → Put IV สูงกว่า Call = กังวล Downside</span>
+  </div>
+
+</div>
+
+<footer>SET50 Options Dashboard · ข้อมูล EOD จาก TFEX.co.th · สร้างโดย Tatpon · S50M24 Series 2567</footer>
+
+<script>
+const ALL = [
+  { label:'18 มีค', strikes:[725,750,775,800,825,850,875,900,925,950,975], callOI:[0,4,9,13,261,1250,1713,2116,1642,905,117], putOI:[5369,2399,2418,1734,1132,523,63,31,0,0,0], callIV:[null,null,9.23,9.97,10.56,10.06,10.38,10.05,10.17,10.27,11.56], putIV:[16.47,14.99,13.19,12.42,11.95,11.57,10.69,10.89,11.43,12.51,14.08] },
+  { label:'19 มีค', strikes:[725,750,775,800,825,850,875,900,925,950,975], callOI:[0,4,9,13,274,1300,1712,2115,1685,916,122], putOI:[5598,2498,2453,1795,1131,572,63,31,0,0,0], callIV:[null,null,9.26,9.87,9.72,9.73,10.09,10.19,9.87,10.62,13.55], putIV:[16.65,15.03,13.36,12.45,12.19,12.32,10.57,13.96,11.38,12.67,14.16] },
+  { label:'20 มีค', strikes:[725,750,775,800,825,850,875,900,925,950,975], callOI:[0,8,9,13,283,1583,1738,2260,1715,907,122], putOI:[5807,2541,2589,2081,1169,584,63,31,0,0,0], callIV:[null,null,9.24,9.81,9.57,10.16,10.38,10.24,10.39,10.47,11.35], putIV:[16.66,14.82,13.31,12.59,12.44,12.04,10.52,10.80,11.58,12.92,14.66] },
+  { label:'21 มีค', strikes:[725,750,775,800,825,850,875,900,925,950,975], callOI:[0,8,9,13,284,1688,1914,2493,1457,1206,122], putOI:[5450,2659,2618,2214,1214,613,65,31,0,0,0], callIV:[null,null,9.24,10.20,10.34,10.36,10.40,10.11,10.48,11.07,10.62], putIV:[16.27,14.83,13.38,12.40,11.85,11.26,12.22,11.09,11.61,12.38,13.95] },
+  { label:'22 มีค', strikes:[725,750,775,800,825,850,875,900,925,950,975], callOI:[0,8,9,18,286,1661,2162,2736,1529,1390,122], putOI:[5456,2696,2624,2259,1210,617,65,39,0,0,0], callIV:[null,null,9.34,10.68,11.51,10.71,10.75,10.58,10.67,11.41,10.91], putIV:[16.40,14.79,13.35,12.36,12.02,11.67,10.77,11.95,11.53,12.72,14.26] },
+  { label:'25 มีค', strikes:[725,750,775,800,825,850,875,900,925,950,975], callOI:[0,8,9,19,313,1776,2167,2889,1531,1396,122], putOI:[5458,2739,2806,2404,1292,609,65,31,1,0,0], callIV:[null,null,9.68,8.61,10.21,10.54,10.67,10.92,11.09,11.78,11.59], putIV:[16.02,15.29,13.52,12.65,12.32,12.59,12.71,13.97,15.36,13.16,14.90] }
+];
+
+let di = 2;
+const gc = '#ffffff12', tc = '#8b949e';
+
+function calcMaxPain(s, coi, poi, test) {
+  let p = 0;
+  s.forEach((v,i) => { if(v>test) p+=coi[i]*(v-test); if(v<test) p+=poi[i]*(test-v); });
+  return p;
+}
+function trendPts(pts) {
+  const n=pts.length, mx=pts.reduce((s,p)=>s+p.x,0)/n, my=pts.reduce((s,p)=>s+p.y,0)/n;
+  const m=pts.reduce((s,p)=>s+(p.x-mx)*(p.y-my),0)/pts.reduce((s,p)=>s+(p.x-mx)**2,0), b=my-m*mx;
+  const xs=[Math.min(...pts.map(p=>p.x)),Math.max(...pts.map(p=>p.x))];
+  return xs.map(x=>({x,y:parseFloat((m*x+b).toFixed(2))}));
+}
+
+let charts = {};
+function mkChart(id, cfg) { if(charts[id]) charts[id].destroy(); charts[id] = new Chart(document.getElementById(id), cfg); }
+
+function render() {
+  const d = ALL[di];
+  const {strikes,callOI,putOI,callIV,putIV} = d;
+  const labels = strikes.map(String);
+  const totalC = callOI.reduce((a,b)=>a+b,0);
+  const totalP = putOI.reduce((a,b)=>a+b,0);
+  const pcr = (totalP/totalC).toFixed(2);
+  const pains = strikes.map(s=>calcMaxPain(strikes,callOI,putOI,s));
+  const mpIdx = pains.indexOf(Math.min(...pains));
+  const mpStrike = strikes[mpIdx];
+
+  const atmIdx = Math.floor(strikes.length/2);
+  const skew = callIV[atmIdx]&&putIV[atmIdx] ? (putIV[atmIdx]-callIV[atmIdx]).toFixed(2) : 'N/A';
+  const skewSent = skew>1?'กังวล Downside':skew<-1?'กังวล Upside':'ปกติ';
+
+  document.getElementById('m-mp').textContent = mpStrike;
+  document.getElementById('m-pcr').textContent = pcr;
+  document.getElementById('m-sent').textContent = pcr<0.7?'Bullish Bias':pcr>1?'Bearish Bias':'Neutral';
+  document.getElementById('m-sent').style.color = pcr<0.7?'#1D9E75':pcr>1?'#E24B4A':'#BA7517';
+  document.getElementById('m-coi').textContent = totalC.toLocaleString();
+  document.getElementById('m-poi').textContent = totalP.toLocaleString();
+  document.getElementById('m-skew').textContent = skew;
+  document.getElementById('m-skew-s').textContent = skewSent;
+  document.getElementById('ins-mp').textContent = 'Max Pain '+mpStrike;
+  document.getElementById('ins-pcr').textContent = 'PC Ratio '+pcr;
+
+  const base = { responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y?.toLocaleString()}`}}},
+    scales:{x:{grid:{color:gc},ticks:{color:tc,font:{size:11}}}, y:{grid:{color:gc},ticks:{color:tc,font:{size:11}}}}
+  };
+
+  mkChart('cOI',{type:'bar',data:{labels,datasets:[
+    {label:'Call OI',data:callOI,backgroundColor:'rgba(55,138,221,0.75)',borderRadius:3},
+    {label:'Put OI',data:putOI,backgroundColor:'rgba(226,75,74,0.75)',borderRadius:3}
+  ]},options:{...base}});
+
+  mkChart('cMP',{type:'bar',data:{labels,datasets:[
+    {label:'Pain Value',data:pains.map(v=>Math.round(v/1000)),backgroundColor:pains.map((_,i)=>i===mpIdx?'#E24B4A':'rgba(186,117,23,0.6)'),borderRadius:3}
+  ]},options:{...base}});
+
+  mkChart('cIV',{type:'line',data:{labels,datasets:[
+    {label:'Call IV',data:callIV,borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,0.05)',tension:0.4,pointRadius:4,spanGaps:true},
+    {label:'Put IV',data:putIV,borderColor:'#D85A30',backgroundColor:'rgba(216,90,48,0.05)',tension:0.4,pointRadius:4,borderDash:[5,3],spanGaps:true}
+  ]},options:{...base,scales:{...base.scales,y:{...base.scales.y,ticks:{...base.scales.y.ticks,callback:v=>v+'%'}}}}});
+
+  const cvPts = callIV.map((v,i)=>v?{x:strikes[i],y:v}:null).filter(Boolean);
+  const pvPts  = putIV.map((v,i)=>v?{x:strikes[i],y:v}:null).filter(Boolean);
+  mkChart('cVol',{data:{datasets:[
+    {type:'scatter',label:'Call IV',data:cvPts,backgroundColor:'rgba(55,138,221,0.8)',pointRadius:6},
+    {type:'scatter',label:'Put IV',data:pvPts,backgroundColor:'rgba(226,75,74,0.8)',pointRadius:6},
+    {type:'line',label:'Call trend',data:trendPts(cvPts),borderColor:'rgba(55,138,221,0.3)',borderWidth:1.5,borderDash:[4,3],pointRadius:0,fill:false},
+    {type:'line',label:'Put trend',data:trendPts(pvPts),borderColor:'rgba(226,75,74,0.3)',borderWidth:1.5,borderDash:[4,3],pointRadius:0,fill:false}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` Strike ${c.parsed.x} → IV ${c.parsed.y?.toFixed(2)}%`}}},
+    scales:{x:{type:'linear',min:710,max:990,grid:{color:gc},ticks:{color:tc,font:{size:11}}},y:{min:7,max:18,grid:{color:gc},ticks:{color:tc,font:{size:11},callback:v=>v+'%'}}}}});
+
+  const tDates = ALL.map(x=>x.label);
+  mkChart('cTrend',{type:'line',data:{labels:tDates,datasets:[
+    {label:'Strike 875',data:ALL.map(x=>x.callOI[6]),borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,0.05)',tension:0.4,pointRadius:4},
+    {label:'Strike 900',data:ALL.map(x=>x.callOI[7]),borderColor:'#E24B4A',backgroundColor:'rgba(226,75,74,0.05)',tension:0.4,pointRadius:4,borderDash:[5,3]},
+    {label:'Strike 850',data:ALL.map(x=>x.callOI[5]),borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,0.05)',tension:0.4,pointRadius:4,borderDash:[3,3]}
+  ]},options:{...base,scales:{...base.scales,y:{...base.scales.y,ticks:{...base.scales.y.ticks,callback:v=>v.toLocaleString()}}}}});
+}
+
+function onDateChange() { di = parseInt(document.getElementById('dateSel').value); render(); }
+function showTab(name, btn) {
+  ['oi','maxpain','iv','vol','trend'].forEach(t=>{ document.getElementById('pane-'+t).style.display=t===name?'':'none'; });
+  document.querySelectorAll('.tab-bar .tab').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+render();
+</script>
+</body>
+</html>
