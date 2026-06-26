@@ -1,6 +1,6 @@
 {
   "date": "26.6.26",
-  "updatedAt": "2026-06-26T06:59:50.382Z",
+  "updatedAt": "2026-06-26T07:02:31.302Z",
   "strikes": [
     790,
     800,
@@ -379,9 +379,6 @@
     "support": {
       "strike": 970,
       "oi": 3346
-    },
-    "prevDate1": "25.6.26",
-    "prevDate5": "18.6.26",
-    "prevDate10": null
+    }
   }
 }
