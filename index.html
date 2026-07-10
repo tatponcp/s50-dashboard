@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>S50 Options Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Chart.js + annotation plugin (เส้น Max Pain / Spot บนกราฟ) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
+  <!-- GSAP + CustomEase: ใช้เฉพาะตัวเลขนับขึ้น (CSS ทำไม่ได้) ด้วย ease เดียวกับ CSS -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/CustomEase.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ================= header ================= -->
+  <header class="topbar reveal" style="--i:0">
+    <h1>S50 Options Dashboard</h1>
+    <span class="date" id="data-date">—</span>
+    <span class="spacer"></span>
+    <!-- ช่องเผื่ออนาคต: GEX Regime (ทำในโปรเจกต์แยก ยังไม่เปิดใช้) -->
+    <span class="gex-slot" title="เร็วๆ นี้ (โปรเจกต์แยก)">
+      <span class="switch"></span> GEX Regime
+    </span>
+    <select class="series-picker" id="series-picker" aria-label="เลือกซีรีส์"></select>
+  </header>
+
+  <!-- แจ้งเตือนเมื่อโหลด data.json ไม่ได้ (เช่น เปิดผ่าน file://) -->
+  <div class="load-error" id="load-error">
+    โหลด <code>data.json</code> ไม่สำเร็จ — ถ้าเปิดไฟล์ตรงๆ (file://) เบราว์เซอร์จะบล็อก fetch
+    ให้รันเว็บผ่าน local server ก่อน เช่น <code>python -m http.server</code>
+    แล้วเปิด <code>http://localhost:8000</code>
+  </div>
+
+  <!-- ================= rollover banner (DTE < 5) ================= -->
+  <div class="banner" id="rollover-banner" role="alert">
+    <span class="icon">⚠️</span>
+    <div id="rollover-text"></div>
+  </div>
+
+  <!-- ================= hero: spot + expected range ================= -->
+  <section class="hero reveal" style="--i:1">
+    <div>
+      <div class="label">SET50 Index (ปิดล่าสุด)</div>
+      <div class="spot-value" id="spot-value" data-countup>—</div>
+      <div class="spot-chg" id="spot-chg"></div>
+    </div>
+    <div class="range-box">
+      <div class="label" id="range-label">Expected Range ถึงวันหมดอายุ</div>
+      <div class="range-track">
+        <div class="range-band sigma1" id="band-sigma1"></div>
+        <div class="range-band sigma05" id="band-sigma05"></div>
+        <div class="range-spot-tick" id="range-spot-tick"></div>
+      </div>
+      <div class="range-labels">
+        <span id="range-low">—</span>
+        <span id="range-mid">±0.5σ / ±1σ</span>
+        <span id="range-high">—</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= stat tiles ================= -->
+  <section class="stats">
+    <div class="tile reveal" style="--i:2">
+      <div class="label">Max Pain</div>
+      <div class="value" id="stat-maxpain" data-countup>—</div>
+      <div class="sub" id="stat-maxpain-sub"></div>
+    </div>
+    <div class="tile reveal" style="--i:3">
+      <div class="label">PCR (Put/Call OI)</div>
+      <div class="value" id="stat-pcr" data-countup>—</div>
+      <div class="sub" id="stat-pcr-sub"></div>
+    </div>
+    <div class="tile reveal" style="--i:4">
+      <div class="label">ATM IV</div>
+      <div class="value" id="stat-atmiv" data-countup>—</div>
+      <div class="sub" id="stat-atmiv-sub"></div>
+      <div class="spark" id="iv-spark"></div>
+    </div>
+    <div class="tile reveal" style="--i:5">
+      <div class="label">IV Rank / Percentile</div>
+      <div class="value" id="stat-ivrank">—</div>
+      <div class="sub" id="stat-ivrank-sub"></div>
+    </div>
+    <div class="tile reveal" style="--i:6">
+      <div class="label">Days to Expiry</div>
+      <div class="value" id="stat-dte" data-countup>—</div>
+      <div class="sub" id="stat-dte-sub"></div>
+    </div>
+    <div class="tile reveal" style="--i:7">
+      <div class="label">Skew (Put−Call IV, OTM ~3%)</div>
+      <div class="value" id="stat-skew" data-countup>—</div>
+      <div class="sub" id="stat-skew-sub"></div>
+    </div>
+  </section>
+
+  <!-- ================= กราฟ OI by Strike ================= -->
+  <section class="card reveal" style="--i:8">
+    <div class="card-head">
+      <h2>Open Interest รายสไตรค์</h2>
+      <span class="spacer"></span>
+      <div class="legend">
+        <span class="key"><span class="swatch" style="background:var(--clr-call)"></span>Call OI</span>
+        <span class="key"><span class="swatch" style="background:var(--clr-put)"></span>Put OI</span>
+      </div>
+      <div class="hint" id="oi-hint"></div>
+    </div>
+    <div class="chart-box tall">
+      <canvas id="chart-oi"></canvas>
+    </div>
+  </section>
+
+  <!-- ================= กราฟ OI Change (แกนสไตรค์เดียวกัน) ================= -->
+  <section class="card reveal" style="--i:9">
+    <div class="card-head">
+      <h2>OI เปลี่ยนแปลง</h2>
+      <span class="spacer"></span>
+      <div class="seg" id="seg-side" role="group" aria-label="เลือกฝั่ง">
+        <button data-side="both" class="active">รวม</button>
+        <button data-side="call">Call</button>
+        <button data-side="put">Put</button>
+      </div>
+      <div class="seg" id="seg-window" role="group" aria-label="เลือกกรอบเวลา">
+        <button data-window="1" class="active">1D</button>
+        <button data-window="5">5D</button>
+        <button data-window="10">10D</button>
+      </div>
+      <div class="hint" id="chg-hint">เขียว = OI เพิ่ม · แดง = OI ลด · ⚡ = เปลี่ยนแปลงผิดปกติเทียบประวัติของสไตรค์นั้นเอง</div>
+    </div>
+    <div class="chart-box short fade-swap" id="chg-box">
+      <canvas id="chart-chg"></canvas>
+    </div>
+  </section>
+
+  <!-- ================= IV Smile เทียบสองซีรีส์ ================= -->
+  <!-- แสดงทั้งซีรีส์ใกล้/ไกลพร้อมกันเสมอ (ไม่ตาม series picker)
+       เพราะประเด็นของกราฟนี้คือการเทียบโครงสร้าง IV ข้ามอายุสัญญา -->
+  <section class="card reveal" style="--i:10">
+    <div class="card-head">
+      <h2>IV Smile รายสไตรค์</h2>
+      <span class="spacer"></span>
+      <!-- legend สร้างจาก JS เพราะชื่อซีรีส์มาจาก data.json -->
+      <div class="legend" id="iv-legend"></div>
+      <div class="hint" id="iv-hint"></div>
+    </div>
+    <div class="chart-box short">
+      <canvas id="chart-iv"></canvas>
+    </div>
+  </section>
+
+  <!-- ================= ตารางรายสไตรค์ ================= -->
+  <section class="card reveal" style="--i:11">
+    <div class="card-head">
+      <h2>ตารางรายสไตรค์</h2>
+      <div class="hint">Vol/OI &gt; 1 = ปริมาณซื้อขายวันนี้สูงกว่าสถานะคงค้าง (เงินใหม่เข้าผิดปกติ)</div>
+    </div>
+    <div class="table-scroll">
+      <table class="strikes" id="strike-table">
+        <thead>
+          <tr>
+            <th>Strike</th>
+            <th>Call OI</th>
+            <th>ΔOI 1D</th>
+            <th>Vol/OI</th>
+            <th>Put OI</th>
+            <th>ΔOI 1D</th>
+            <th>Vol/OI</th>
+            <th>IV C/P</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="foot">
+    ข้อมูล End-of-Day เท่านั้น · ตัวชี้วัดทั้งหมดเป็นการอ่านตำแหน่งของตลาด ไม่ใช่คำแนะนำการลงทุน
+  </footer>
+</div>
+
+<script src="js/metrics.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>

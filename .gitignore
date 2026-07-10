@@ -1,0 +1,9 @@
+# โปรเจกต์ทดลอง React (ยังไม่ใช้จริง — dashboard หลักคือ index.html ที่ root)
+webapp/
+
+# ไฟล์ชั่วคราวของ Python
+__pycache__/
+.venv/
+
+# ไฟล์ session ของเครื่องมือช่วยเขียนโค้ด
+.claude/

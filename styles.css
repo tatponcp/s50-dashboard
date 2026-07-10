@@ -1,0 +1,489 @@
+/* ============================================================
+   S50 Options Dashboard — styles.css
+   ------------------------------------------------------------
+   Design tokens ทั้งหมดอยู่ใน :root ที่เดียว
+   อยากเปลี่ยนธีมสี/ระยะห่างทั้งเว็บ แก้ตรงนี้จุดเดียวพอ
+   ============================================================ */
+
+:root {
+  /* ---- สีหลักตามธีม dashboard เดิม ---- */
+  --clr-call: #3d8bfd;            /* Call = น้ำเงิน */
+  --clr-put:  #f0a13a;            /* Put  = ส้ม */
+  --clr-call-soft: rgba(61, 139, 253, 0.14);
+  --clr-put-soft:  rgba(240, 161, 58, 0.14);
+
+  /* ---- สีเส้น IV Smile ต่อซีรีส์ (คนละความหมายกับ Call/Put)
+          คู่นี้ผ่าน validator บนพื้นการ์ด #16181d: lightness band,
+          chroma, CVD ΔE ≥ 39, contrast ≥ 3:1 ---- */
+  --clr-series-near: #0fa37f;     /* ซีรีส์ใกล้ (front month) = เขียวteal */
+  --clr-series-far:  #8b6ce8;     /* ซีรีส์ไกล = ม่วง (เส้นประเสริมอีกชั้น) */
+
+  /* ---- สีทิศทาง (OI เพิ่ม/ลด, ราคาขึ้น/ลง) ---- */
+  --clr-up:   #0ca30c;
+  --clr-down: #e05252;
+
+  /* ---- สีสถานะ/แจ้งเตือน ---- */
+  --clr-warn: #fab219;
+  --clr-warn-soft: rgba(250, 178, 25, 0.12);
+
+  /* ---- พื้นผิว ---- */
+  --surface-page: #0d0e12;        /* พื้นหลังเพจ */
+  --surface-card: #16181d;        /* การ์ด/กราฟ */
+  --surface-raise: #1f2229;       /* ปุ่ม, chip, dropdown */
+  --surface-hover: #262a33;
+
+  /* ---- ตัวหนังสือ ---- */
+  --text-primary:   #f2f3f5;
+  --text-secondary: #a8adb8;
+  --text-muted:     #6d7380;
+
+  /* ---- เส้น/กรอบ ---- */
+  --grid-line: #262a33;           /* gridline ในกราฟ (hairline) */
+  --border: rgba(255, 255, 255, 0.08);
+
+  /* ---- ระยะห่าง ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* ---- รูปทรง ---- */
+  --radius-card: 14px;
+  --radius-ctrl: 8px;
+  --radius-pill: 999px;
+
+  /* ---- ฟอนต์ ---- */
+  --font-sans: system-ui, -apple-system, "Segoe UI", "Noto Sans Thai", sans-serif;
+  --fs-hero: clamp(2.1rem, 6vw, 2.9rem);
+  --fs-stat: clamp(1.35rem, 4vw, 1.7rem);
+  --fs-body: 0.9rem;
+  --fs-small: 0.78rem;
+
+  /* ---- Motion (Emil Kowalski style: ease-out แรงต้นนุ่มปลาย) ---- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 180ms;
+  --dur-med: 400ms;
+  --dur-slow: 700ms;
+  --stagger: 60ms;                /* หน่วงการ์ดทีละใบตอนโหลด */
+}
+
+/* ============ base ============ */
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--surface-page);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ============ header ============ */
+
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.topbar h1 {
+  font-size: 1.05rem;
+  font-weight: 650;
+  margin: 0;
+  letter-spacing: 0.01em;
+}
+
+.topbar .date {
+  color: var(--text-muted);
+  font-size: var(--fs-small);
+}
+
+.topbar .spacer { flex: 1; }
+
+select.series-picker {
+  background: var(--surface-raise);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-ctrl);
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  font-size: var(--fs-small);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+select.series-picker:hover { background: var(--surface-hover); }
+
+/* ช่องเผื่ออนาคต: GEX Regime toggle (ยังไม่ implement — โปรเจกต์แยก) */
+.gex-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--fs-small);
+  opacity: 0.55;
+  cursor: not-allowed;
+  user-select: none;
+}
+.gex-slot .switch {
+  width: 30px; height: 17px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-raise);
+  border: 1px solid var(--border);
+  position: relative;
+}
+.gex-slot .switch::after {
+  content: "";
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+/* ============ banner แจ้งเตือน (rollover) ============ */
+
+.banner {
+  display: none;
+  align-items: flex-start;
+  gap: var(--space-3);
+  background: var(--clr-warn-soft);
+  border: 1px solid rgba(250, 178, 25, 0.35);
+  border-radius: var(--radius-card);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--fs-small);
+  color: var(--text-primary);
+}
+.banner.show { display: flex; animation: slide-in var(--dur-slow) var(--ease-out) both; }
+.banner .icon { flex: none; font-size: 1rem; line-height: 1.4; }
+.banner strong { color: var(--clr-warn); }
+
+/* ============ hero (spot + expected range) ============ */
+
+.hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-4) var(--space-6);
+  padding: var(--space-2) var(--space-1);
+}
+
+.hero .spot-value {
+  font-size: var(--fs-hero);
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+.hero .spot-chg {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.spot-chg.up   { color: var(--clr-up); }
+.spot-chg.down { color: var(--clr-down); }
+
+.hero .label {
+  color: var(--text-muted);
+  font-size: var(--fs-small);
+  margin-bottom: var(--space-1);
+}
+
+/* แถบ Expected Range: แสดง ±0.5σ (เข้ม) ซ้อนบน ±1σ (จาง) */
+.range-box { min-width: min(340px, 100%); flex: 1; }
+.range-track {
+  position: relative;
+  height: 14px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-raise);
+  overflow: hidden;
+}
+.range-band {
+  position: absolute;
+  top: 0; bottom: 0;
+  border-radius: var(--radius-pill);
+  transform-origin: center;
+  transform: scaleX(0);
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+.range-band.sigma1  { background: var(--clr-call-soft); }
+.range-band.sigma05 { background: rgba(61, 139, 253, 0.34); }
+.range-spot-tick {
+  position: absolute;
+  top: -2px; bottom: -2px;
+  width: 2px;
+  background: var(--text-primary);
+}
+.range-labels {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-secondary);
+  font-size: var(--fs-small);
+  margin-top: var(--space-1);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============ stat tiles ============ */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-3);
+}
+
+.tile {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.tile .label {
+  color: var(--text-secondary);
+  font-size: var(--fs-small);
+}
+
+.tile .value {
+  font-size: var(--fs-stat);
+  font-weight: 650;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.tile .sub {
+  color: var(--text-muted);
+  font-size: var(--fs-small);
+}
+.tile .sub .accent { color: var(--text-secondary); font-weight: 600; }
+.tile .sub.warn { color: var(--clr-warn); }
+
+.tile .not-enough {
+  color: var(--text-muted);
+  font-size: var(--fs-small);
+  font-style: normal;
+}
+
+/* sparkline เล็กใน tile ATM IV */
+.tile .spark { margin-top: var(--space-1); }
+.tile .spark svg { display: block; width: 100%; height: 30px; }
+
+/* ============ cards / charts ============ */
+
+.card {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.card-head h2 {
+  font-size: 0.95rem;
+  font-weight: 650;
+  margin: 0;
+}
+
+.card-head .hint {
+  color: var(--text-muted);
+  font-size: var(--fs-small);
+  flex-basis: 100%;
+}
+
+.card-head .spacer { flex: 1; }
+
+/* legend เอง (นอก Chart.js) */
+.legend {
+  display: flex;
+  flex-wrap: wrap; /* จอแคบให้ key ตกบรรทัดแทนที่จะล้นขอบการ์ด */
+  gap: var(--space-2) var(--space-4);
+  font-size: var(--fs-small);
+  color: var(--text-secondary);
+}
+.legend .key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend .swatch {
+  width: 12px; height: 12px;
+  border-radius: 3px;
+  flex: none;
+}
+/* swatch แบบ "เส้น" สำหรับกราฟเส้น (IV Smile) — โชว์ลายเส้นประได้ด้วย */
+.legend .swatch.line {
+  width: 18px; height: 3px;
+  border-radius: 2px;
+}
+
+.chart-box { position: relative; width: 100%; }
+.chart-box.tall  { height: 320px; }
+.chart-box.short { height: 220px; }
+@media (max-width: 560px) {
+  .chart-box.tall  { height: 260px; }
+  .chart-box.short { height: 190px; }
+}
+
+/* ============ segmented control (1D/5D/10D, Call/Put/รวม) ============ */
+
+.seg {
+  display: inline-flex;
+  background: var(--surface-raise);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-ctrl);
+  padding: 2px;
+  gap: 2px;
+}
+
+.seg button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-small);
+  padding: 4px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.seg button:hover { color: var(--text-primary); }
+.seg button.active {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* ============ ตารางรายสไตรค์ ============ */
+
+.table-scroll { overflow-x: auto; }
+
+table.strikes {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+table.strikes th {
+  text-align: right;
+  color: var(--text-muted);
+  font-weight: 500;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--grid-line);
+}
+table.strikes th:first-child { text-align: left; }
+
+table.strikes td {
+  text-align: right;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--grid-line);
+  color: var(--text-secondary);
+}
+table.strikes td:first-child {
+  text-align: left;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+table.strikes tr:last-child td { border-bottom: 0; }
+
+table.strikes tr.atm td { background: rgba(255, 255, 255, 0.03); }
+
+td .chg-up   { color: var(--clr-up); }
+td .chg-down { color: var(--clr-down); }
+
+/* ไฮไลต์ Vol/OI > 1 : ไม่ใช้สีอย่างเดียว มี badge กำกับ */
+.badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-left: 6px;
+  vertical-align: 1px;
+}
+.badge.volratio { background: var(--clr-call-soft); color: var(--clr-call); }
+.badge.volratio.put { background: var(--clr-put-soft); color: var(--clr-put); }
+.badge.unusual { background: var(--clr-warn-soft); color: var(--clr-warn); }
+
+/* ============ footer ============ */
+
+.foot {
+  color: var(--text-muted);
+  font-size: var(--fs-small);
+  text-align: center;
+  padding: var(--space-4) 0 var(--space-6);
+}
+
+/* ============ error state ============ */
+
+.load-error {
+  display: none;
+  background: var(--surface-card);
+  border: 1px solid rgba(224, 82, 82, 0.4);
+  border-radius: var(--radius-card);
+  padding: var(--space-5);
+  color: var(--text-secondary);
+}
+.load-error.show { display: block; }
+.load-error code {
+  background: var(--surface-raise);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* ============ animations ตอนโหลดหน้า ============ */
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* การ์ดทยอยโผล่ทีละใบ (stagger ผ่าน --i ที่ตั้งจาก HTML) */
+.reveal {
+  opacity: 0;
+  animation: slide-in var(--dur-slow) var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * var(--stagger));
+}
+
+/* สลับ view ของกราฟ OI change แบบนุ่มนวล */
+.fade-swap { transition: opacity var(--dur-med) var(--ease-out); }
+.fade-swap.swapping { opacity: 0.35; }
+
+/* ============ reduced motion: ปิด animation ทั้งหมด ============ */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
