@@ -61,7 +61,7 @@
   --radius-pill: 999px;
 
   /* ---- ฟอนต์: Plex Sans สำหรับข้อความ / Plex Mono สำหรับตัวเลข ---- */
-  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", "Noto Sans Thai", sans-serif;
+  --font-sans: "IBM Plex Sans", "IBM Plex Sans Thai", system-ui, -apple-system, "Segoe UI", "Noto Sans Thai", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
   --fs-hero: clamp(2.1rem, 6vw, 2.5rem);   /* ~40px */
   --fs-stat: 1.5rem;                        /* 24px ตามดีไซน์ */
@@ -448,6 +448,7 @@ select.series-picker option { background: var(--surface-card); color: var(--text
 }
 
 .chart-box { position: relative; width: 100%; }
+.chart-box > div { width: 100%; height: 100%; } /* container ของ ECharts */
 .chart-box.tall  { height: 340px; }
 .chart-box.short { height: 240px; }
 .chart-box.iv    { height: 480px; }

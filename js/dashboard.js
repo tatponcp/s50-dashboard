@@ -2,7 +2,9 @@
    dashboard.js — โหลด data.json แล้ว render ทุกอย่าง
    ------------------------------------------------------------
    การคำนวณตัวชี้วัดทั้งหมดอยู่ใน metrics.js (โหลดก่อนไฟล์นี้)
-   ไฟล์นี้ทำหน้าที่: จัดการ state, วาดกราฟ Chart.js, animation
+   ไฟล์นี้ทำหน้าที่: จัดการ state, วาดกราฟ ECharts, animation
+   สเปกกราฟ (สี/grid/tooltip/จังหวะ animation) ยกมาจากไฟล์ดีไซน์
+   "S50 Options Dashboard.dc.html" ใน Claude Design ตรงๆ
    ============================================================ */
 'use strict';
 
@@ -76,40 +78,52 @@
   }
 
   /* ============================================================
-     Chart.js defaults ให้เข้ากับธีม
+     ค่าตั้งต้นร่วมของ ECharts ให้เข้ากับธีม (ตามไฟล์ดีไซน์)
      ============================================================ */
-  function setupChartDefaults() {
-    const d = Chart.defaults;
-    d.font.family = token('--font-sans') || 'system-ui, sans-serif';
-    d.font.size = 11;
-    d.color = COLOR.textMuted;
-    d.plugins.tooltip.backgroundColor = COLOR.surfaceRaise;
-    d.plugins.tooltip.titleColor = COLOR.textPrimary;
-    d.plugins.tooltip.bodyColor = COLOR.textSecondary;
-    d.plugins.tooltip.footerColor = token('--clr-warn');
-    d.plugins.tooltip.borderColor = 'rgba(255,255,255,0.12)';
-    d.plugins.tooltip.borderWidth = 1;
-    d.plugins.tooltip.cornerRadius = 8;
-    d.plugins.tooltip.padding = 10;
-    d.plugins.tooltip.boxPadding = 4;
-    d.plugins.legend.display = false; // ใช้ legend ของเราเองใน HTML
-  }
+  const CHART_FONT = token('--font-sans') || 'IBM Plex Sans, sans-serif';
 
-  /* แท่งกราฟทยอยโตทีละแท่ง (~90ms ต่อแท่ง) เฉพาะ render แรก
-     ตอน update ข้อมูล (สลับ series/กรอบเวลา) ให้ transition ปกติ */
-  function staggerAnimation() {
-    if (REDUCED_MOTION) return false;
-    let firstRenderDone = false;
+  function baseOption() {
     return {
-      onComplete: () => { firstRenderDone = true; },
-      delay: (ctx) =>
-        (ctx.type === 'data' && ctx.mode === 'default' && !firstRenderDone)
-          ? ctx.dataIndex * 90 + ctx.datasetIndex * 45
-          : 0,
-      duration: 550,
-      easing: 'easeOutQuart',
+      backgroundColor: 'transparent',
+      animation: !REDUCED_MOTION,
+      textStyle: { fontFamily: CHART_FONT, color: COLOR.textMuted, fontSize: 12 },
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: COLOR.surfaceRaise,
+        borderColor: COLOR.border,
+        textStyle: { color: COLOR.textSecondary, fontSize: 12.5 },
+      },
     };
   }
+
+  /* แกนสไตรค์ (category) + แกนค่า สไตล์เดียวกันทุกกราฟ */
+  function strikeAxis(strikes) {
+    return {
+      type: 'category',
+      data: strikes.map(String),
+      axisLine: { lineStyle: { color: COLOR.border } },
+      axisLabel: {
+        color: COLOR.textMuted, fontSize: 11,
+        interval: Math.ceil(strikes.length / 22),
+      },
+    };
+  }
+
+  function valueAxis(formatter) {
+    return {
+      type: 'value',
+      axisLine: { show: false },
+      splitLine: { lineStyle: { color: COLOR.grid } },
+      axisLabel: { color: COLOR.textMuted, fontSize: 11, formatter },
+    };
+  }
+
+  /* ปรับขนาดกราฟตามหน้าต่าง (เฉพาะตัวที่สร้างแล้ว) */
+  window.addEventListener('resize', () => {
+    for (const c of [state.oiChart, state.chgChart, state.ivChart]) {
+      if (c) c.resize();
+    }
+  });
 
   /* ============================================================
      โหลดข้อมูลแล้วเริ่ม
@@ -141,7 +155,6 @@
   function boot(data) {
     state.data = data;
     state.hist = M.sortedHistory(data);
-    setupChartDefaults();
 
     /* dropdown เลือก series (ถ้ามีหลาย expiration) */
     const names = Object.keys(data.series || {});
@@ -157,7 +170,7 @@
     picker.style.display = names.length > 1 ? '' : 'none';
     picker.addEventListener('change', () => {
       state.seriesName = picker.value;
-      renderAll(false);
+      renderAll();
     });
 
     /* segmented controls ของกราฟ OI change */
@@ -171,7 +184,7 @@
     });
 
     bindTabs();
-    renderAll(true);
+    renderAll();
   }
 
   /* ============================================================
@@ -206,7 +219,7 @@
       }
       if (name === 'iv') {
         if (state.ivChart) state.ivChart.resize();
-        else renderIvSmile(true);
+        else renderIvSmile();
       }
     });
   }
@@ -222,7 +235,7 @@
     });
   }
 
-  /* fade เบาๆ ตอนสลับ view แล้วให้ Chart.js animate ค่าต่อ */
+  /* fade เบาๆ ตอนสลับ view แล้วให้ ECharts animate ค่าต่อ */
   function swapChgChart() {
     const box = $('chg-box');
     box.classList.add('swapping');
@@ -252,9 +265,9 @@
   }
 
   /* ============================================================
-     render ทั้งหน้า (initial = ครั้งแรก มี count-up / stagger)
+     render ทั้งหน้า (เรียกซ้ำเมื่อสลับซีรีส์)
      ============================================================ */
-  function renderAll(initial) {
+  function renderAll() {
     const d = state.data;
     const sd = d.series[state.seriesName];
     const spot = M.num(d.spot);
@@ -329,7 +342,7 @@
     /* ---- กราฟ + ตาราง ----
        กราฟของแท็บ OI Change / IV Smile สร้างครั้งแรกตอนเปิดแท็บ
        (ดู activateTab) — ที่นี่อัปเดตเฉพาะตัวที่สร้างแล้ว */
-    renderOiChart(sd, spot, maxPain, initial);
+    renderOiChart(sd, spot, maxPain);
     renderChangeTab();
     renderTable(sd, chg1, spot, maxPain);
   }
@@ -496,7 +509,7 @@
     return strikes.length - 1;
   }
 
-  function renderOiChart(sd, spot, maxPain, initial) {
+  function renderOiChart(sd, spot, maxPain) {
     const strikes = M.strikesOf(sd);
     const callData = strikes.map((k) => M.num(sd[String(k)].callOI));
     const putData = strikes.map((k) => M.num(sd[String(k)].putOI));
@@ -504,89 +517,61 @@
     $('oi-hint').textContent =
       `เส้นตั้ง: Spot ${fmt(spot)} และ Max Pain ${fmtInt(maxPain)} · แตะ/ชี้แท่งเพื่อดูตัวเลข`;
 
-    const annotations = {};
+    /* เส้นตั้ง Spot (ทึบ) + Max Pain (ประ) — สไตล์ตามไฟล์ดีไซน์ */
+    const markLineData = [];
     const spotIdx = fractionalIndex(strikes, spot);
     if (spotIdx !== null) {
-      annotations.spotLine = {
-        type: 'line', xMin: spotIdx, xMax: spotIdx,
-        borderColor: COLOR.textSecondary, borderWidth: 1.5,
+      markLineData.push({
+        xAxis: spotIdx,
+        lineStyle: { color: COLOR.textSecondary, width: 1.5 },
         label: {
-          display: true, content: `Spot ${fmt(spot)}`,
-          position: 'start', backgroundColor: COLOR.surfaceRaise,
-          color: COLOR.textPrimary, font: { size: 10 },
-          padding: 4, borderRadius: 6,
+          formatter: `Spot ${fmt(spot)}`, color: COLOR.textPrimary,
+          backgroundColor: COLOR.surfaceRaise, padding: 5, borderRadius: 6, fontSize: 11,
         },
-      };
+      });
     }
     if (maxPain !== null) {
-      const mpIdx = fractionalIndex(strikes, maxPain);
-      annotations.maxPainLine = {
-        type: 'line', xMin: mpIdx, xMax: mpIdx,
-        borderColor: COLOR.textMuted, borderWidth: 1.5, borderDash: [5, 4],
+      markLineData.push({
+        xAxis: fractionalIndex(strikes, maxPain),
+        lineStyle: { color: COLOR.textMuted, width: 1.5, type: 'dashed' },
         label: {
-          display: true, content: `Max Pain ${fmtInt(maxPain)}`,
-          position: 'end', backgroundColor: COLOR.surfaceRaise,
-          color: COLOR.textSecondary, font: { size: 10 },
-          padding: 4, borderRadius: 6,
+          formatter: `Max Pain ${fmtInt(maxPain)}`, color: COLOR.textSecondary,
+          backgroundColor: COLOR.surfaceRaise, padding: 5, borderRadius: 6, fontSize: 11,
         },
-      };
+      });
     }
 
-    const config = {
-      type: 'bar',
-      data: {
-        labels: strikes.map(String),
-        datasets: [
-          {
-            label: 'Call OI', data: callData,
-            backgroundColor: COLOR.call,
-            borderRadius: 3, borderSkipped: 'start',
-            maxBarThickness: 20, categoryPercentage: 0.75, barPercentage: 0.92,
-          },
-          {
-            label: 'Put OI', data: putData,
-            backgroundColor: COLOR.put,
-            borderRadius: 3, borderSkipped: 'start',
-            maxBarThickness: 20, categoryPercentage: 0.75, barPercentage: 0.92,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: initial ? staggerAnimation() : { duration: 400 },
-        interaction: { mode: 'index', intersect: false },
-        scales: {
-          x: { grid: { display: false }, ticks: { color: COLOR.textMuted } },
-          y: {
-            grid: { color: COLOR.grid, lineWidth: 1 },
-            border: { display: false },
-            ticks: {
-              color: COLOR.textMuted,
-              callback: (v) => v >= 1000 ? (v / 1000) + 'K' : v,
-            },
-          },
-        },
-        plugins: {
-          annotation: { annotations },
-          tooltip: {
-            callbacks: {
-              title: (items) => `สไตรค์ ${items[0].label}`,
-              label: (item) =>
-                ` ${item.dataset.label}: ${fmtInt(item.parsed.y)}`,
-            },
-          },
+    if (!state.oiChart) state.oiChart = echarts.init($('chart-oi'));
+    state.oiChart.setOption({
+      ...baseOption(),
+      grid: { left: 56, right: 20, top: 20, bottom: 40 },
+      tooltip: {
+        ...baseOption().tooltip,
+        axisPointer: { type: 'shadow' },
+        formatter: (params) => {
+          let s = `สไตรค์ ${strikes[params[0].dataIndex]}`;
+          for (const p of params) s += `<br/>${p.seriesName}: ${fmtInt(p.value)}`;
+          return s;
         },
       },
-    };
-
-    if (state.oiChart) {
-      state.oiChart.data = config.data;
-      state.oiChart.options.plugins.annotation.annotations = annotations;
-      state.oiChart.update();
-    } else {
-      state.oiChart = new Chart($('chart-oi'), config);
-    }
+      xAxis: strikeAxis(strikes),
+      yAxis: valueAxis((v) => (v >= 1000 ? v / 1000 + 'K' : v)),
+      series: [
+        {
+          name: 'Call OI', type: 'bar', data: callData,
+          itemStyle: { color: COLOR.call, borderRadius: [3, 3, 0, 0] },
+          barMaxWidth: 20,
+          markLine: markLineData.length
+            ? { silent: true, symbol: 'none', data: markLineData }
+            : undefined,
+        },
+        {
+          name: 'Put OI', type: 'bar', data: putData,
+          itemStyle: { color: COLOR.put, borderRadius: [3, 3, 0, 0] },
+          barMaxWidth: 20,
+        },
+      ],
+    }, true);
   }
 
   /* ============================================================
@@ -630,68 +615,46 @@
       ? `${sideLabel} เทียบ ${state.chgWindow} วันทำการก่อน · เขียว = เพิ่ม แดง = ลด · ⚡ = ผิดปกติเทียบประวัติสไตรค์นั้นเอง (1D)`
       : `history ยังไม่พอสำหรับกรอบ ${state.chgWindow} วัน`;
 
-    const config = {
-      type: 'bar',
-      data: {
-        labels: strikes.map((k) => unusualAt(k) ? `⚡${k}` : String(k)),
-        datasets: [{
-          label: `ΔOI ${sideLabel}`,
-          data: values,
-          /* สีตามทิศทาง: เพิ่ม=เขียว ลด=แดง (ทิศของแท่งบอกซ้ำอีกชั้น
-             จึงไม่ได้พึ่งสีอย่างเดียว) */
-          backgroundColor: values.map((v) =>
-            v === null ? COLOR.grid : (v >= 0 ? COLOR.up : COLOR.down)),
-          borderRadius: 3, borderSkipped: 'start',
-          maxBarThickness: 20, categoryPercentage: 0.6, barPercentage: 0.9,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: REDUCED_MOTION ? false : { duration: 450, easing: 'easeOutQuart' },
-        interaction: { mode: 'index', intersect: false },
-        scales: {
-          x: { grid: { display: false }, ticks: { color: COLOR.textMuted } },
-          y: {
-            grid: { color: COLOR.grid, lineWidth: 1 },
-            border: { display: false },
-            ticks: {
-              color: COLOR.textMuted,
-              callback: (v) => (v > 0 ? '+' : '') +
-                (Math.abs(v) >= 1000 ? (v / 1000) + 'K' : v),
-            },
-          },
-        },
-        plugins: {
-          annotation: {
-            annotations: {
-              zero: {
-                type: 'line', yMin: 0, yMax: 0,
-                borderColor: COLOR.textMuted, borderWidth: 1,
-              },
-            },
-          },
-          tooltip: {
-            callbacks: {
-              title: (items) => `สไตรค์ ${items[0].label.replace('⚡', '')}`,
-              label: (item) => ` ΔOI ${sideLabel}: ${fmtSigned(item.parsed.y)}`,
-              footer: (items) => {
-                const k = Number(items[0].label.replace('⚡', ''));
-                const u = unusualAt(k);
-                return u ? `⚡ ผิดปกติฝั่ง ${u.side} (z = ${u.z.toFixed(1)})` : '';
-              },
-            },
-          },
+    if (!state.chgChart) state.chgChart = echarts.init($('chart-chg'));
+    state.chgChart.setOption({
+      ...baseOption(),
+      grid: { left: 56, right: 20, top: 20, bottom: 40 },
+      tooltip: {
+        ...baseOption().tooltip,
+        axisPointer: { type: 'shadow' },
+        formatter: (params) => {
+          const k = strikes[params[0].dataIndex];
+          let s = `สไตรค์ ${k}<br/>ΔOI ${sideLabel}: ${fmtSigned(params[0].value)}`;
+          const u = unusualAt(k);
+          if (u) s += `<br/>⚡ ผิดปกติฝั่ง ${u.side} (z = ${u.z.toFixed(1)})`;
+          return s;
         },
       },
-    };
-
-    if (state.chgChart) {
-      state.chgChart.data = config.data;
-      state.chgChart.update();
-    } else {
-      state.chgChart = new Chart($('chart-chg'), config);
-    }
+      xAxis: {
+        ...strikeAxis(strikes),
+        data: strikes.map((k) => (unusualAt(k) ? `⚡${k}` : String(k))),
+      },
+      yAxis: valueAxis((v) =>
+        (v > 0 ? '+' : '') + (Math.abs(v) >= 1000 ? v / 1000 + 'K' : v)),
+      series: [{
+        name: `ΔOI ${sideLabel}`,
+        type: 'bar',
+        data: values,
+        /* สีตามทิศทาง: เพิ่ม=เขียว ลด=แดง (ทิศของแท่งบอกซ้ำอีกชั้น
+           จึงไม่ได้พึ่งสีอย่างเดียว) */
+        itemStyle: {
+          color: (p) => (p.value >= 0 ? COLOR.up : COLOR.down),
+          borderRadius: [3, 3, 0, 0],
+        },
+        barMaxWidth: 20,
+        markLine: {
+          silent: true, symbol: 'none',
+          lineStyle: { color: COLOR.textMuted, width: 1 },
+          label: { show: false },
+          data: [{ yAxis: 0 }],
+        },
+      }],
+    }, true);
   }
 
   /* ============================================================
@@ -702,12 +665,12 @@
      - ข้อมูล EOD ไม่เปลี่ยนระหว่างเปิดหน้า — วาดครั้งเดียวพอ
      - ซีรีส์ไกลใช้เส้นประ: แยกเส้นได้แม้ไม่เห็นสี (CVD/พิมพ์ขาวดำ)
      ============================================================ */
-  function renderIvSmile(initial) {
+  function renderIvSmile() {
     if (state.ivChart) return;
     const d = state.data;
-    /* token สีรองรับ 2 ซีรีส์ — ใช้ 2 ซีรีส์ใกล้สุด (ไกลกว่านั้นสภาพคล่องต่ำ) */
+    /* สีรองรับ 2 ซีรีส์ — ใช้ 2 ซีรีส์ใกล้สุด (ไกลกว่านั้นสภาพคล่องต่ำ) */
     const names = Object.keys(d.series).slice(0, 2);
-    const colors = [COLOR.seriesNear, COLOR.seriesFar];
+    const lineColors = [COLOR.seriesNear, COLOR.seriesFar];
     const spot = M.num(d.spot);
 
     /* แกนสไตรค์ = union ของทุกซีรีส์ (บางสไตรค์มีแค่ซีรีส์เดียว) */
@@ -715,89 +678,63 @@
     for (const n of names) for (const k of M.strikesOf(d.series[n])) set.add(k);
     const strikes = [...set].sort((a, b) => a - b);
 
-    const datasets = names.map((n, i) => ({
-      label: n,
-      data: strikes.map((k) => M.midIV((d.series[n] || {})[String(k)])),
-      borderColor: colors[i],
-      backgroundColor: colors[i],
-      borderWidth: 2.5,
-      borderDash: i === 0 ? [] : [6, 4],
-      pointRadius: 3,
-      pointHoverRadius: 5.5,
-      cubicInterpolationMode: 'monotone', // โค้งนุ่มโดยไม่ overshoot จุดจริง
-      spanGaps: false, // สไตรค์ที่ไม่มี IV ให้ขาดจริง ไม่ลากเส้นหลอก
-    }));
+    /* เส้น Spot ปักที่สไตรค์ใกล้สุด (ตามไฟล์ดีไซน์) */
+    const spotIdx = strikes.length && spot !== null
+      ? strikes.reduce((best, s, i) =>
+          (Math.abs(s - spot) < Math.abs(strikes[best] - spot) ? i : best), 0)
+      : null;
 
-    /* legend สร้างเอง (ชื่อซีรีส์มาจากไฟล์ข้อมูล) — ซีรีส์เดียวไม่ต้องมี */
-    const legend = $('iv-legend');
-    legend.textContent = '';
-    if (names.length >= 2) {
-      names.forEach((n, i) => {
-        const key = document.createElement('span');
-        key.className = 'key';
-        const sw = document.createElement('span');
-        sw.className = 'swatch line';
-        sw.style.background = i === 0 ? colors[i]
-          : `repeating-linear-gradient(90deg, ${colors[i]} 0 6px, transparent 6px 10px)`;
-        key.appendChild(sw);
-        const dte = dteOf(n);
-        key.appendChild(document.createTextNode(
-          dte !== null ? `${n} (${dte} วัน)` : n));
-        legend.appendChild(key);
-      });
-    }
     $('iv-hint').textContent =
       'เส้น = ค่าเฉลี่ย IV Call/Put ต่อสไตรค์ · เส้นประ = ซีรีส์ไกล · เส้นตั้ง = Spot · แตะ/ชี้จุดเพื่อดู IV แยกฝั่ง';
 
-    const annotations = {};
-    const spotIdx = fractionalIndex(strikes, spot);
-    if (spotIdx !== null) {
-      annotations.spotLine = {
-        type: 'line', xMin: spotIdx, xMax: spotIdx,
-        borderColor: COLOR.textSecondary, borderWidth: 1.5,
-        label: {
-          display: true, content: `Spot ${fmt(spot)}`,
-          position: 'start', backgroundColor: COLOR.surfaceRaise,
-          color: COLOR.textPrimary, font: { size: 10 },
-          padding: 4, borderRadius: 6,
-        },
-      };
-    }
-
-    state.ivChart = new Chart($('chart-iv'), {
+    const series = names.map((n, i) => ({
+      name: `${n} (${dteOf(n) !== null ? dteOf(n) + ' วัน' : '?'})`,
       type: 'line',
-      data: { labels: strikes.map(String), datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        /* จุดทยอยโผล่ซ้าย→ขวาเหมือนแท่งกราฟอื่น (ปิดเองเมื่อ reduced motion) */
-        animation: initial ? staggerAnimation() : false,
-        interaction: { mode: 'index', intersect: false },
-        scales: {
-          x: { grid: { display: false }, ticks: { color: COLOR.textMuted } },
-          y: {
-            /* ไม่บังคับเริ่มที่ 0 — เส้นอ่านจากตำแหน่ง ไม่ใช่ความยาวแท่ง */
-            grid: { color: COLOR.grid, lineWidth: 1 },
-            border: { display: false },
-            ticks: { color: COLOR.textMuted, callback: (v) => v + '%' },
-          },
+      data: strikes.map((k) => M.midIV((d.series[n] || {})[String(k)])),
+      lineStyle: { color: lineColors[i], width: 2.5, type: i === 0 ? 'solid' : 'dashed' },
+      itemStyle: { color: lineColors[i] },
+      symbolSize: 7,
+      connectNulls: false, // สไตรค์ที่ไม่มี IV ให้ขาดจริง ไม่ลากเส้นหลอก
+      smooth: 0.2,
+      animationDuration: 900,
+      animationDelay: (idx) => 200 + idx * 22, // จุดทยอยโผล่ซ้าย→ขวา
+      markLine: i === 0 && spotIdx !== null ? {
+        silent: true, symbol: 'none',
+        lineStyle: { color: COLOR.textSecondary, width: 1 },
+        label: {
+          formatter: `Spot ${fmt(spot)}`, color: COLOR.textPrimary,
+          backgroundColor: COLOR.surfaceRaise, padding: 6, borderRadius: 6, fontSize: 12,
         },
-        plugins: {
-          annotation: { annotations },
-          tooltip: {
-            callbacks: {
-              title: (items) => `สไตรค์ ${items[0].label}`,
-              label: (item) => {
-                const row =
-                  (d.series[item.dataset.label] || {})[item.label] || {};
-                return ` ${item.dataset.label}: ${fmt(item.parsed.y)}%`
-                  + ` (C ${fmt(M.num(row.callIV))} / P ${fmt(M.num(row.putIV))})`;
-              },
-            },
-          },
+        data: [{ xAxis: spotIdx }],
+      } : undefined,
+    }));
+
+    state.ivChart = echarts.init($('chart-iv'));
+    state.ivChart.setOption({
+      ...baseOption(),
+      animationDuration: 900,
+      animationEasing: 'cubicOut',
+      grid: { left: 56, right: 20, top: 40, bottom: 40 },
+      legend: { top: 0, textStyle: { color: COLOR.textSecondary, fontSize: 12.5 } },
+      tooltip: {
+        ...baseOption().tooltip,
+        formatter: (params) => {
+          const k = strikes[params[0].dataIndex];
+          let s = `สไตรค์ ${k}`;
+          for (const p of params) {
+            /* ชื่อ series มีวงเล็บ dte ต่อท้าย — ตัดออกเพื่อ lookup ข้อมูลดิบ */
+            const name = p.seriesName.replace(/ \(.*\)$/, '');
+            const row = (d.series[name] || {})[String(k)] || {};
+            s += `<br/>${p.seriesName}: ${p.value === null ? '–' : fmt(p.value) + '%'}`
+              + ` (C ${fmt(M.num(row.callIV))} / P ${fmt(M.num(row.putIV))})`;
+          }
+          return s;
         },
       },
-    });
+      xAxis: strikeAxis(strikes),
+      yAxis: { ...valueAxis('{value}%'), scale: true }, // ไม่บังคับเริ่มที่ 0 — เส้นอ่านจากตำแหน่ง
+      series,
+    }, true);
   }
 
   /* ============================================================

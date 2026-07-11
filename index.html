@@ -5,16 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>S50 Options Dashboard</title>
 
-  <!-- ฟอนต์ตามดีไซน์: IBM Plex Sans (ข้อความ) + IBM Plex Mono (ตัวเลข) -->
+  <!-- ฟอนต์ตามดีไซน์: IBM Plex Sans (ละติน) + IBM Plex Sans Thai (ไทย) + IBM Plex Mono (ตัวเลข)
+       ต้องมี Plex Sans Thai แยก เพราะ IBM Plex Sans ไม่มีอักษรไทย
+       (ไม่ใส่ = ตัวไทย fallback เป็นฟอนต์ระบบ หน้าตาไม่เข้ากัน) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="styles.css">
 
-  <!-- Chart.js + annotation plugin (เส้น Max Pain / Spot บนกราฟ) -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
+  <!-- ECharts (กราฟทั้งหมด — ตัวเดียวกับที่ไฟล์ดีไซน์ใช้) -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <!-- GSAP + CustomEase: ใช้เฉพาะตัวเลขนับขึ้น (CSS ทำไม่ได้) ด้วย ease เดียวกับ CSS -->
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/CustomEase.min.js"></script>
@@ -33,8 +34,9 @@
       <div class="subtitle">TFEX SET50 Index Options &middot; End-of-Day</div>
     </div>
     <span class="spacer"></span>
-    <!-- ช่องเผื่ออนาคต: GEX Regime (ทำในโปรเจกต์แยก ยังไม่เปิดใช้) -->
-    <span class="gex-slot" title="เร็วๆ นี้ (โปรเจกต์แยก)">
+    <!-- ช่องเผื่ออนาคต: GEX Regime (โปรเจกต์แยก) — ซ่อนไว้ให้ header
+         สะอาดตามดีไซน์ พอ GEX พร้อมค่อยลบ hidden ออก -->
+    <span class="gex-slot" title="เร็วๆ นี้ (โปรเจกต์แยก)" hidden>
       <span class="switch"></span> GEX Regime
     </span>
     <span class="date" id="data-date">—</span>
@@ -98,7 +100,7 @@
         <div class="hint" id="oi-hint"></div>
       </div>
       <div class="chart-box tall">
-        <canvas id="chart-oi"></canvas>
+        <div id="chart-oi"></div>
       </div>
     </section>
 
@@ -193,7 +195,7 @@
         <div class="hint" id="chg-hint">เขียว = OI เพิ่ม · แดง = OI ลด · ⚡ = เปลี่ยนแปลงผิดปกติเทียบประวัติของสไตรค์นั้นเอง</div>
       </div>
       <div class="chart-box short fade-swap" id="chg-box">
-        <canvas id="chart-chg"></canvas>
+        <div id="chart-chg"></div>
       </div>
     </section>
   </div>
@@ -205,13 +207,11 @@
     <section class="card">
       <div class="card-head">
         <h2>IV Smile รายสไตรค์</h2>
-        <span class="spacer"></span>
-        <!-- legend สร้างจาก JS เพราะชื่อซีรีส์มาจาก data.json -->
-        <div class="legend" id="iv-legend"></div>
+        <!-- legend อยู่ในตัวกราฟ (ECharts) ตามดีไซน์ -->
         <div class="hint" id="iv-hint"></div>
       </div>
       <div class="chart-box iv">
-        <canvas id="chart-iv"></canvas>
+        <div id="chart-iv"></div>
       </div>
     </section>
   </div>
