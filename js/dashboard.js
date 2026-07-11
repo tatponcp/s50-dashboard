@@ -36,6 +36,7 @@
     data: null,
     hist: [],          // history เรียงเก่า→ใหม่ (ไม่รวมวันนี้)
     seriesName: null,
+    tab: 'overview',   // overview | change | iv
     chgWindow: 1,      // 1 / 5 / 10 วันทำการ
     chgSide: 'both',   // both | call | put
     oiChart: null,
@@ -169,7 +170,45 @@
       swapChgChart();
     });
 
+    bindTabs();
     renderAll(true);
+  }
+
+  /* ============================================================
+     Tabs: Overview / OI Change / IV Smile
+     ------------------------------------------------------------
+     กราฟใน panel ที่ hidden มีขนาด 0 — จึงสร้างกราฟของแท็บนั้น
+     "ครั้งแรกที่เปิด" แทนการสร้างทั้งหมดตอนโหลด (lazy init)
+     ============================================================ */
+  const TAB_PANELS = { overview: 'panel-overview', change: 'panel-change', iv: 'panel-iv' };
+
+  function bindTabs() {
+    document.querySelectorAll('.tabs button').forEach((btn) => {
+      btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+    });
+  }
+
+  function activateTab(name) {
+    if (state.tab === name) return;
+    state.tab = name;
+    document.querySelectorAll('.tabs button').forEach((b) => {
+      const on = b.dataset.tab === name;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-selected', String(on));
+    });
+    for (const [t, id] of Object.entries(TAB_PANELS)) $(id).hidden = t !== name;
+
+    /* สร้าง/ปรับขนาดกราฟหลัง panel แสดงผลแล้ว (ให้ layout คำนวณขนาดก่อน) */
+    requestAnimationFrame(() => {
+      if (name === 'change' && !$('chg-card').hidden) {
+        if (state.chgChart) state.chgChart.resize();
+        else updateChgChart();
+      }
+      if (name === 'iv') {
+        if (state.ivChart) state.ivChart.resize();
+        else renderIvSmile(true);
+      }
+    });
   }
 
   function bindSeg(id, attr, onChange) {
@@ -287,11 +326,23 @@
       $('stat-skew-sub').textContent = 'IV ฝั่ง OTM ไม่พอคำนวณ';
     }
 
-    /* ---- กราฟ + ตาราง ---- */
+    /* ---- กราฟ + ตาราง ----
+       กราฟของแท็บ OI Change / IV Smile สร้างครั้งแรกตอนเปิดแท็บ
+       (ดู activateTab) — ที่นี่อัปเดตเฉพาะตัวที่สร้างแล้ว */
     renderOiChart(sd, spot, maxPain, initial);
-    updateChgChart();
-    renderIvSmile(initial);
-    renderTable(sd, chg1, spot);
+    renderChangeTab();
+    renderTable(sd, chg1, spot, maxPain);
+  }
+
+  /* ============================================================
+     แท็บ OI Change: ถ้ายังไม่มีสแนปช็อตย้อนหลังเลย (เทียบ 1D ไม่ได้)
+     ให้แสดง empty state แทนกราฟ — การเทียบกับ 0 จะหลอกตา
+     ============================================================ */
+  function renderChangeTab() {
+    const havePast = !!M.nDaysBack(state.hist, 1);
+    $('chg-empty').hidden = havePast;
+    $('chg-card').hidden = !havePast;
+    if (havePast && state.chgChart) updateChgChart();
   }
 
   /* ============================================================
@@ -489,14 +540,14 @@
           {
             label: 'Call OI', data: callData,
             backgroundColor: COLOR.call,
-            borderRadius: 4, borderSkipped: 'start',
-            maxBarThickness: 22, categoryPercentage: 0.75, barPercentage: 0.92,
+            borderRadius: 3, borderSkipped: 'start',
+            maxBarThickness: 20, categoryPercentage: 0.75, barPercentage: 0.92,
           },
           {
             label: 'Put OI', data: putData,
             backgroundColor: COLOR.put,
-            borderRadius: 4, borderSkipped: 'start',
-            maxBarThickness: 22, categoryPercentage: 0.75, barPercentage: 0.92,
+            borderRadius: 3, borderSkipped: 'start',
+            maxBarThickness: 20, categoryPercentage: 0.75, barPercentage: 0.92,
           },
         ],
       },
@@ -590,8 +641,8 @@
              จึงไม่ได้พึ่งสีอย่างเดียว) */
           backgroundColor: values.map((v) =>
             v === null ? COLOR.grid : (v >= 0 ? COLOR.up : COLOR.down)),
-          borderRadius: 4, borderSkipped: 'start',
-          maxBarThickness: 22, categoryPercentage: 0.6, barPercentage: 0.9,
+          borderRadius: 3, borderSkipped: 'start',
+          maxBarThickness: 20, categoryPercentage: 0.6, barPercentage: 0.9,
         }],
       },
       options: {
@@ -669,10 +720,10 @@
       data: strikes.map((k) => M.midIV((d.series[n] || {})[String(k)])),
       borderColor: colors[i],
       backgroundColor: colors[i],
-      borderWidth: 2,
+      borderWidth: 2.5,
       borderDash: i === 0 ? [] : [6, 4],
-      pointRadius: 2.5,
-      pointHoverRadius: 5,
+      pointRadius: 3,
+      pointHoverRadius: 5.5,
       cubicInterpolationMode: 'monotone', // โค้งนุ่มโดยไม่ overshoot จุดจริง
       spanGaps: false, // สไตรค์ที่ไม่มี IV ให้ขาดจริง ไม่ลากเส้นหลอก
     }));
@@ -696,7 +747,7 @@
       });
     }
     $('iv-hint').textContent =
-      'เส้น = ค่าเฉลี่ย IV Call/Put ต่อสไตรค์ · แตะ/ชี้จุดเพื่อดู IV แยกฝั่ง · เส้นตั้ง = Spot';
+      'เส้น = ค่าเฉลี่ย IV Call/Put ต่อสไตรค์ · เส้นประ = ซีรีส์ไกล · เส้นตั้ง = Spot · แตะ/ชี้จุดเพื่อดู IV แยกฝั่ง';
 
     const annotations = {};
     const spotIdx = fractionalIndex(strikes, spot);
@@ -752,22 +803,29 @@
   /* ============================================================
      ตารางรายสไตรค์ (มุมมองแบบตารางของข้อมูลทุกกราฟ)
      ============================================================ */
-  function renderTable(sd, chg1, spot) {
+  function renderTable(sd, chg1, spot, maxPain) {
     const tbody = $('strike-table').querySelector('tbody');
     tbody.textContent = '';
     const atm = M.atmStrike(sd, spot);
+    const strikes = M.strikesOf(sd);
 
-    for (const k of M.strikesOf(sd)) {
+    /* แถบ OI ในเซลล์: ยาวตามสัดส่วนเทียบค่าสูงสุดของฝั่งตัวเอง
+       (Call เทียบ Call, Put เทียบ Put — คนละสเกลกันโดยตั้งใจ) */
+    const maxCallOI = Math.max(1, ...strikes.map((k) => M.numOr0((sd[String(k)] || {}).callOI)));
+    const maxPutOI = Math.max(1, ...strikes.map((k) => M.numOr0((sd[String(k)] || {}).putOI)));
+
+    for (const k of strikes) {
       const row = sd[String(k)] || {};
       const c = chg1[String(k)] || { call: null, put: null };
       const tr = document.createElement('tr');
-      if (k === atm) tr.className = 'atm';
+      if (k === atm) tr.classList.add('atm');
+      if (k === maxPain) tr.classList.add('mp');
 
-      tr.appendChild(td(String(k), 'th'));
-      tr.appendChild(td(fmtInt(M.num(row.callOI))));
+      tr.appendChild(tdStrike(k));
+      tr.appendChild(tdOi(row.callOI, 'call', maxCallOI));
       tr.appendChild(tdChange(c.call, state.unusualBySide.call[k]));
       tr.appendChild(tdRatio(M.volOiRatio(row, 'call'), 'call'));
-      tr.appendChild(td(fmtInt(M.num(row.putOI))));
+      tr.appendChild(tdOi(row.putOI, 'put', maxPutOI));
       tr.appendChild(tdChange(c.put, state.unusualBySide.put[k]));
       tr.appendChild(tdRatio(M.volOiRatio(row, 'put'), 'put'));
       tr.appendChild(td(
@@ -778,6 +836,36 @@
     function td(text) {
       const el = document.createElement('td');
       el.textContent = text; // textContent เสมอ — ข้อมูลภายนอกห้าม innerHTML
+      return el;
+    }
+
+    /* Strike + ป้าย ATM / MAX PAIN (ตรงกันทั้งคู่ = "ATM · MP") */
+    function tdStrike(k) {
+      const el = td(String(k));
+      let tag = '';
+      if (k === atm && k === maxPain) tag = 'ATM · MP';
+      else if (k === atm) tag = 'ATM';
+      else if (k === maxPain) tag = 'MAX PAIN';
+      if (tag) {
+        const t = document.createElement('span');
+        t.className = 'tag';
+        t.textContent = tag;
+        el.appendChild(t);
+      }
+      return el;
+    }
+
+    /* OI + แถบพื้นหลังตามสัดส่วน (มองแนวโน้มได้โดยไม่ต้องอ่านตัวเลข) */
+    function tdOi(v, side, max) {
+      const el = document.createElement('td');
+      el.className = 'oi-cell';
+      const bar = document.createElement('div');
+      bar.className = 'oi-bar ' + side;
+      bar.style.width = (M.numOr0(v) / max * 100).toFixed(1) + '%';
+      el.appendChild(bar);
+      const span = document.createElement('span');
+      span.textContent = fmtInt(M.num(v));
+      el.appendChild(span);
       return el;
     }
 
@@ -798,18 +886,18 @@
       return el;
     }
 
-    /* Vol/OI: badge เมื่อ > 1 (เงินใหม่เข้าผิดปกติ) */
+    /* Vol/OI > 1 (เงินใหม่เข้าผิดปกติ): สีตามฝั่ง + ▲ กำกับ
+       ไม่พึ่งสีอย่างเดียว — สัญลักษณ์บอกซ้ำอีกชั้น */
     function tdRatio(r, side) {
       const el = document.createElement('td');
       const span = document.createElement('span');
-      span.textContent = r === null ? '–' : r.toFixed(2);
-      el.appendChild(span);
-      if (r !== null && r > 1) {
-        const b = document.createElement('span');
-        b.className = 'badge volratio' + (side === 'put' ? ' put' : '');
-        b.textContent = '>1';
-        el.appendChild(b);
+      if (r === null) {
+        span.textContent = '–';
+      } else {
+        span.textContent = r.toFixed(2) + (r > 1 ? ' ▲' : '');
+        if (r > 1) span.className = 'volhot ' + side;
       }
+      el.appendChild(span);
       return el;
     }
   }

@@ -3,70 +3,78 @@
    ------------------------------------------------------------
    Design tokens ทั้งหมดอยู่ใน :root ที่เดียว
    อยากเปลี่ยนธีมสี/ระยะห่างทั้งเว็บ แก้ตรงนี้จุดเดียวพอ
+   ธีมปัจจุบันอิงไฟล์ดีไซน์ "S50 Options Dashboard.dc.html"
+   (Claude Design, 2026-07) — IBM Plex + น้ำเงิน/ทอง
    ============================================================ */
 
 :root {
-  /* ---- สีหลักตามธีม dashboard เดิม ---- */
-  --clr-call: #3d8bfd;            /* Call = น้ำเงิน */
-  --clr-put:  #f0a13a;            /* Put  = ส้ม */
-  --clr-call-soft: rgba(61, 139, 253, 0.14);
-  --clr-put-soft:  rgba(240, 161, 58, 0.14);
+  /* ---- สีหลักตามดีไซน์: Call = น้ำเงิน, Put = ทอง ---- */
+  --clr-call: #3d74e0;
+  --clr-put:  #b8902e;
+  --clr-call-soft: rgba(61, 116, 224, 0.16);
+  --clr-put-soft:  rgba(184, 144, 46, 0.18);
 
   /* ---- สีเส้น IV Smile ต่อซีรีส์ (คนละความหมายกับ Call/Put)
-          คู่นี้ผ่าน validator บนพื้นการ์ด #16181d: lightness band,
-          chroma, CVD ΔE ≥ 39, contrast ≥ 3:1 ---- */
-  --clr-series-near: #0fa37f;     /* ซีรีส์ใกล้ (front month) = เขียวteal */
-  --clr-series-far:  #8b6ce8;     /* ซีรีส์ไกล = ม่วง (เส้นประเสริมอีกชั้น) */
+          ซีรีส์ไกลใช้เส้นประเสริมอีกชั้น แยกได้แม้ไม่เห็นสี ---- */
+  --clr-series-near: #3d74e0;     /* ซีรีส์ใกล้ (front month) */
+  --clr-series-far:  #8c7ae6;     /* ซีรีส์ไกล = ม่วง */
 
   /* ---- สีทิศทาง (OI เพิ่ม/ลด, ราคาขึ้น/ลง) ---- */
-  --clr-up:   #0ca30c;
-  --clr-down: #e05252;
+  --clr-up:   #3fae71;
+  --clr-down: #d8564c;
 
   /* ---- สีสถานะ/แจ้งเตือน ---- */
   --clr-warn: #fab219;
   --clr-warn-soft: rgba(250, 178, 25, 0.12);
 
   /* ---- พื้นผิว ---- */
-  --surface-page: #0d0e12;        /* พื้นหลังเพจ */
-  --surface-card: #16181d;        /* การ์ด/กราฟ */
-  --surface-raise: #1f2229;       /* ปุ่ม, chip, dropdown */
-  --surface-hover: #262a33;
+  --surface-page: #0d0f13;        /* พื้นหลังเพจ */
+  --surface-card: #161a21;        /* การ์ด/กราฟ */
+  --surface-raise: #1b2029;       /* ปุ่ม, chip, dropdown, แถบ range */
+  --surface-hover: #262a33;       /* ปุ่ม active / hover */
 
   /* ---- ตัวหนังสือ ---- */
-  --text-primary:   #f2f3f5;
-  --text-secondary: #a8adb8;
-  --text-muted:     #6d7380;
+  --text-primary:   #f4f6f8;
+  --text-secondary: #a7afbd;
+  --text-label:     #8b93a3;      /* หัวข้อ uppercase เล็กๆ บน tile/การ์ด */
+  --text-muted:     #6b7280;
 
   /* ---- เส้น/กรอบ ---- */
-  --grid-line: #262a33;           /* gridline ในกราฟ (hairline) */
-  --border: rgba(255, 255, 255, 0.08);
+  --grid-line: #242832;           /* gridline ในกราฟ + เส้นคั่นตาราง */
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.1);
+
+  /* ---- เงาการ์ด (ตามดีไซน์) ---- */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 28px -20px rgba(0, 0, 0, 0.55);
 
   /* ---- ระยะห่าง ---- */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
-  --space-5: 24px;
+  --space-5: 22px;
   --space-6: 32px;
 
   /* ---- รูปทรง ---- */
-  --radius-card: 14px;
+  --radius-card: 10px;
   --radius-ctrl: 8px;
   --radius-pill: 999px;
 
-  /* ---- ฟอนต์ ---- */
-  --font-sans: system-ui, -apple-system, "Segoe UI", "Noto Sans Thai", sans-serif;
-  --fs-hero: clamp(2.1rem, 6vw, 2.9rem);
-  --fs-stat: clamp(1.35rem, 4vw, 1.7rem);
-  --fs-body: 0.9rem;
+  /* ---- ฟอนต์: Plex Sans สำหรับข้อความ / Plex Mono สำหรับตัวเลข ---- */
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", "Noto Sans Thai", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
+  --fs-hero: clamp(2.1rem, 6vw, 2.5rem);   /* ~40px */
+  --fs-stat: 1.5rem;                        /* 24px ตามดีไซน์ */
+  --fs-body: 0.875rem;                      /* 14px */
   --fs-small: 0.78rem;
+  --fs-kicker: 0.656rem;                    /* 10.5px หัวข้อ uppercase */
 
   /* ---- Motion (Emil Kowalski style: ease-out แรงต้นนุ่มปลาย) ---- */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --dur-fast: 180ms;
   --dur-med: 400ms;
-  --dur-slow: 700ms;
-  --stagger: 60ms;                /* หน่วงการ์ดทีละใบตอนโหลด */
+  --dur-slow: 500ms;
+  --stagger: 40ms;                /* หน่วงการ์ดทีละใบตอนโหลด */
 }
 
 /* ============ base ============ */
@@ -84,13 +92,35 @@ body {
   line-height: 1.5;
 }
 
+::selection { background: rgba(76, 141, 255, 0.35); }
+
+[hidden] { display: none !important; }
+
 .wrap {
-  max-width: 1080px;
+  max-width: 1360px;
   margin: 0 auto;
-  padding: var(--space-4);
+  padding: 28px 32px 60px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-5);
+}
+@media (max-width: 640px) {
+  .wrap { padding: 18px 16px 44px; }
+}
+
+/* ตัวเลขทั้งหมดใช้ mono + tabular ให้คอลัมน์ตรงกัน */
+.mono, .spot-value, .tile .value, .topbar .date,
+table.strikes tbody, .range-labels span:first-child, .range-labels span:last-child {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============ accent bar (แถบไล่สีบนสุด) ============ */
+
+.accent-bar {
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--clr-call), var(--clr-put) 65%, transparent);
 }
 
 /* ============ header ============ */
@@ -99,19 +129,38 @@ body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
+  gap: 14px;
+}
+
+.title-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.eyebrow {
+  font-size: var(--fs-kicker);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--text-label);
+  text-transform: uppercase;
 }
 
 .topbar h1 {
-  font-size: 1.05rem;
-  font-weight: 650;
+  font-size: 1.25rem;      /* 20px */
+  font-weight: 600;
   margin: 0;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.005em;
+}
+
+.subtitle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
 }
 
 .topbar .date {
-  color: var(--text-muted);
-  font-size: var(--fs-small);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
 }
 
 .topbar .spacer { flex: 1; }
@@ -119,15 +168,18 @@ body {
 select.series-picker {
   background: var(--surface-raise);
   color: var(--text-primary);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-ctrl);
-  padding: var(--space-2) var(--space-3);
+  padding: 9px 14px;
   font: inherit;
-  font-size: var(--fs-small);
+  font-family: var(--font-mono);
+  font-size: 0.81rem;
+  font-weight: 600;
   cursor: pointer;
   transition: background var(--dur-fast) var(--ease-out);
 }
 select.series-picker:hover { background: var(--surface-hover); }
+select.series-picker option { background: var(--surface-card); color: var(--text-primary); }
 
 /* ช่องเผื่ออนาคต: GEX Regime toggle (ยังไม่ implement — โปรเจกต์แยก) */
 .gex-slot {
@@ -156,6 +208,43 @@ select.series-picker:hover { background: var(--surface-hover); }
   background: var(--text-muted);
 }
 
+/* ============ tabs ============ */
+
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: var(--space-3);
+}
+
+.tabs button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.84rem;      /* 13.5px */
+  padding: 9px 16px;
+  border-radius: var(--radius-ctrl);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.tabs button:hover { color: var(--text-primary); }
+.tabs button.active {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+/* panel = เนื้อหาของแต่ละแท็บ */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
 /* ============ banner แจ้งเตือน (rollover) ============ */
 
 .banner {
@@ -179,31 +268,33 @@ select.series-picker:hover { background: var(--surface-hover); }
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: var(--space-4) var(--space-6);
-  padding: var(--space-2) var(--space-1);
+  gap: 28px 44px;
+  padding: var(--space-1) 0;
 }
 
 .hero .spot-value {
   font-size: var(--fs-hero);
-  font-weight: 700;
-  line-height: 1.05;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.01em;
 }
 
 .hero .spot-chg {
-  font-size: 1rem;
+  font-size: 0.94rem;
   font-weight: 600;
+  margin-top: 6px;
 }
 .spot-chg.up   { color: var(--clr-up); }
 .spot-chg.down { color: var(--clr-down); }
 
 .hero .label {
   color: var(--text-muted);
-  font-size: var(--fs-small);
-  margin-bottom: var(--space-1);
+  font-size: 0.78rem;
+  margin-bottom: 6px;
 }
 
 /* แถบ Expected Range: แสดง ±0.5σ (เข้ม) ซ้อนบน ±1σ (จาง) */
-.range-box { min-width: min(340px, 100%); flex: 1; }
+.range-box { min-width: min(440px, 100%); flex: 1; }
 .range-track {
   position: relative;
   height: 14px;
@@ -217,13 +308,13 @@ select.series-picker:hover { background: var(--surface-hover); }
   border-radius: var(--radius-pill);
   transform-origin: center;
   transform: scaleX(0);
-  transition: transform var(--dur-slow) var(--ease-out);
+  transition: transform 700ms var(--ease-out);
 }
-.range-band.sigma1  { background: var(--clr-call-soft); }
-.range-band.sigma05 { background: rgba(61, 139, 253, 0.34); }
+.range-band.sigma1  { background: rgba(61, 116, 224, 0.18); }
+.range-band.sigma05 { background: rgba(61, 116, 224, 0.45); }
 .range-spot-tick {
   position: absolute;
-  top: -2px; bottom: -2px;
+  top: -3px; bottom: -3px;
   width: 2px;
   background: var(--text-primary);
 }
@@ -231,53 +322,59 @@ select.series-picker:hover { background: var(--surface-hover); }
   display: flex;
   justify-content: space-between;
   color: var(--text-secondary);
-  font-size: var(--fs-small);
-  margin-top: var(--space-1);
-  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  margin-top: var(--space-2);
 }
+.range-labels .mid { color: var(--text-muted); }
 
 /* ============ stat tiles ============ */
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
 }
 
 .tile {
   background: var(--surface-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  padding: var(--space-4);
+  padding: 18px 20px 20px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 6px;
   min-width: 0;
+  box-shadow: var(--shadow-card);
 }
 
 .tile .label {
-  color: var(--text-secondary);
-  font-size: var(--fs-small);
+  color: var(--text-label);
+  font-size: var(--fs-kicker);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
 }
 
 .tile .value {
   font-size: var(--fs-stat);
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.15;
   overflow-wrap: anywhere;
 }
 
 .tile .sub {
   color: var(--text-muted);
-  font-size: var(--fs-small);
+  font-size: 0.75rem;
 }
 .tile .sub .accent { color: var(--text-secondary); font-weight: 600; }
 .tile .sub.warn { color: var(--clr-warn); }
 
+/* สถานะ "ข้อมูลสะสมยังไม่พอ" — ไม่ใช้ mono เพราะเป็นข้อความ ไม่ใช่ตัวเลข */
 .tile .not-enough {
   color: var(--text-muted);
-  font-size: var(--fs-small);
-  font-style: normal;
+  font-family: var(--font-sans);
+  font-size: 0.94rem;
+  font-weight: 500;
 }
 
 /* sparkline เล็กใน tile ATM IV */
@@ -290,28 +387,37 @@ select.series-picker:hover { background: var(--surface-hover); }
   background: var(--surface-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  padding: var(--space-4);
+  padding: 20px 22px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: 14px;
+  box-shadow: var(--shadow-card);
 }
 
 .card-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2) var(--space-3);
+  gap: 10px 16px;
 }
 
 .card-head h2 {
-  font-size: 0.95rem;
-  font-weight: 650;
+  font-size: 0.94rem;
+  font-weight: 600;
   margin: 0;
+}
+
+/* หัวข้อแบบ uppercase เล็ก (การ์ดกราฟ OI ตามดีไซน์) */
+.card-head h2.kicker {
+  font-size: var(--fs-kicker);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-label);
 }
 
 .card-head .hint {
   color: var(--text-muted);
-  font-size: var(--fs-small);
+  font-size: 0.75rem;
   flex-basis: 100%;
 }
 
@@ -322,7 +428,7 @@ select.series-picker:hover { background: var(--surface-hover); }
   display: flex;
   flex-wrap: wrap; /* จอแคบให้ key ตกบรรทัดแทนที่จะล้นขอบการ์ด */
   gap: var(--space-2) var(--space-4);
-  font-size: var(--fs-small);
+  font-size: 0.75rem;
   color: var(--text-secondary);
 }
 .legend .key {
@@ -331,8 +437,8 @@ select.series-picker:hover { background: var(--surface-hover); }
   gap: 6px;
 }
 .legend .swatch {
-  width: 12px; height: 12px;
-  border-radius: 3px;
+  width: 10px; height: 10px;
+  border-radius: 2px;
   flex: none;
 }
 /* swatch แบบ "เส้น" สำหรับกราฟเส้น (IV Smile) — โชว์ลายเส้นประได้ด้วย */
@@ -342,11 +448,39 @@ select.series-picker:hover { background: var(--surface-hover); }
 }
 
 .chart-box { position: relative; width: 100%; }
-.chart-box.tall  { height: 320px; }
-.chart-box.short { height: 220px; }
+.chart-box.tall  { height: 340px; }
+.chart-box.short { height: 240px; }
+.chart-box.iv    { height: 480px; }
 @media (max-width: 560px) {
   .chart-box.tall  { height: 260px; }
-  .chart-box.short { height: 190px; }
+  .chart-box.short { height: 200px; }
+  .chart-box.iv    { height: 320px; }
+}
+
+/* ============ empty state (แท็บ OI Change ตอน history ไม่พอ) ============ */
+
+.empty-card {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 32px;
+  gap: 10px;
+}
+.empty-card h2 {
+  font-size: 0.94rem;
+  font-weight: 600;
+  margin: 12px 0 0;
+}
+.empty-card .empty-icon {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: var(--surface-raise);
+  border: 1px solid var(--border-strong);
+}
+.empty-card .empty-text {
+  color: var(--text-muted);
+  font-size: 0.81rem;
+  max-width: 420px;
 }
 
 /* ============ segmented control (1D/5D/10D, Call/Put/รวม) ============ */
@@ -388,59 +522,95 @@ select.series-picker:hover { background: var(--surface-hover); }
 table.strikes {
   width: 100%;
   border-collapse: collapse;
-  font-size: var(--fs-small);
-  font-variant-numeric: tabular-nums;
+  font-size: 0.81rem;      /* 13px ตามดีไซน์ */
   white-space: nowrap;
 }
 
 table.strikes th {
   text-align: right;
   color: var(--text-muted);
-  font-weight: 500;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--grid-line);
+  font-weight: 600;
+  font-size: var(--fs-kicker);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 10px 14px;
+  border-bottom: 1px solid #2c303a;
 }
 table.strikes th:first-child { text-align: left; }
 
 table.strikes td {
   text-align: right;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--grid-line);
+  padding: 9px 14px;
+  border-bottom: 1px solid #2c303a;
   color: var(--text-secondary);
 }
 table.strikes td:first-child {
   text-align: left;
   color: var(--text-primary);
   font-weight: 600;
+  padding-left: 14px;
 }
 table.strikes tr:last-child td { border-bottom: 0; }
 
-table.strikes tr.atm td { background: rgba(255, 255, 255, 0.03); }
+/* แถว ATM / Max Pain: พื้นจาง + เส้น accent ซ้าย (ตั้งค่าจาก JS ผ่าน class) */
+table.strikes tr.atm td { background: rgba(61, 116, 224, 0.07); }
+table.strikes tr.atm td:first-child { box-shadow: inset 2px 0 0 var(--clr-call); }
+table.strikes tr.mp  td:first-child { box-shadow: inset 2px 0 0 var(--text-muted); }
+
+/* ป้าย ATM / MAX PAIN ท้ายตัวเลขสไตรค์ */
+.tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  font-size: 0.56rem;      /* 9px */
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  vertical-align: 2px;
+  font-family: var(--font-sans);
+}
+
+/* แถบ OI ในเซลล์ (ยาวตามสัดส่วนของ OI สูงสุดฝั่งนั้น) */
+td.oi-cell { position: relative; }
+td.oi-cell .oi-bar {
+  position: absolute;
+  top: 2px; bottom: 2px; right: 0;
+  border-radius: 3px 0 0 3px;
+  pointer-events: none;
+}
+td.oi-cell .oi-bar.call { background: var(--clr-call-soft); }
+td.oi-cell .oi-bar.put  { background: var(--clr-put-soft); }
+td.oi-cell span { position: relative; }
 
 td .chg-up   { color: var(--clr-up); }
 td .chg-down { color: var(--clr-down); }
 
-/* ไฮไลต์ Vol/OI > 1 : ไม่ใช้สีอย่างเดียว มี badge กำกับ */
+/* Vol/OI > 1 : สีตามฝั่ง + ▲ กำกับ (ไม่พึ่งสีอย่างเดียว) */
+td .volhot.call { color: var(--clr-call); }
+td .volhot.put  { color: var(--clr-put); }
+
+/* badge ⚡ ผิดปกติ (คอลัมน์ ΔOI) */
 .badge {
   display: inline-block;
   padding: 1px 7px;
   border-radius: var(--radius-pill);
-  font-size: 0.7rem;
+  font-size: 0.66rem;
   font-weight: 600;
   margin-left: 6px;
   vertical-align: 1px;
+  font-family: var(--font-sans);
 }
-.badge.volratio { background: var(--clr-call-soft); color: var(--clr-call); }
-.badge.volratio.put { background: var(--clr-put-soft); color: var(--clr-put); }
 .badge.unusual { background: var(--clr-warn-soft); color: var(--clr-warn); }
 
 /* ============ footer ============ */
 
 .foot {
   color: var(--text-muted);
-  font-size: var(--fs-small);
+  font-size: 0.75rem;
   text-align: center;
-  padding: var(--space-4) 0 var(--space-6);
+  padding: var(--space-3) 0 0;
 }
 
 /* ============ error state ============ */
@@ -448,7 +618,7 @@ td .chg-down { color: var(--clr-down); }
 .load-error {
   display: none;
   background: var(--surface-card);
-  border: 1px solid rgba(224, 82, 82, 0.4);
+  border: 1px solid rgba(216, 86, 76, 0.4);
   border-radius: var(--radius-card);
   padding: var(--space-5);
   color: var(--text-secondary);
@@ -458,12 +628,13 @@ td .chg-down { color: var(--clr-down); }
   background: var(--surface-raise);
   padding: 1px 6px;
   border-radius: 4px;
+  font-family: var(--font-mono);
 }
 
 /* ============ animations ตอนโหลดหน้า ============ */
 
 @keyframes slide-in {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
