@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>S50 Options Dashboard</title>
+  <!-- favicon: แท่ง Call/Put ย่อส่วน (inline SVG ไม่ต้องมีไฟล์แยก) -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230d0f13'/%3E%3Crect x='7' y='14' width='5' height='11' rx='1.5' fill='%233d74e0'/%3E%3Crect x='14' y='8' width='5' height='17' rx='1.5' fill='%233d74e0'/%3E%3Crect x='21' y='11' width='5' height='14' rx='1.5' fill='%23b68e2c'/%3E%3C/svg%3E">
 
   <!-- ฟอนต์ตามดีไซน์: IBM Plex Sans (ละติน) + IBM Plex Sans Thai (ไทย) + IBM Plex Mono (ตัวเลข)
        ต้องมี Plex Sans Thai แยก เพราะ IBM Plex Sans ไม่มีอักษรไทย
@@ -60,7 +62,9 @@
   <nav class="tabs reveal" style="--i:1" role="tablist" aria-label="เลือก dashboard">
     <button role="tab" data-tab="overview" aria-selected="true" class="active">Overview</button>
     <button role="tab" data-tab="change" aria-selected="false">OI Change</button>
-    <button role="tab" data-tab="iv" aria-selected="false">IV Smile</button>
+    <!-- IV Smile: พักไว้พัฒนาต่อ — เปิดกลับโดยลบ hidden ตรงนี้
+         และตั้ง FEATURES.ivSmile = true ใน js/dashboard.js -->
+    <button role="tab" data-tab="iv" aria-selected="false" hidden>IV Smile</button>
   </nav>
 
   <!-- ================= OVERVIEW ================= -->
@@ -192,11 +196,42 @@
           <button data-window="5">5D</button>
           <button data-window="10">10D</button>
         </div>
-        <div class="hint" id="chg-hint">เขียว = OI เพิ่ม · แดง = OI ลด · ⚡ = เปลี่ยนแปลงผิดปกติเทียบประวัติของสไตรค์นั้นเอง</div>
       </div>
-      <div class="chart-box short fade-swap" id="chg-box">
+
+      <!-- คำตอบก่อนกราฟ: สไตรค์ไหนสะสม/ปิดสถานะมากสุด + สุทธิทั้งกระดาน
+           สไตรค์คือพระเอกของกล่อง — ตัวใหญ่สุด ตามด้วยจำนวนสัญญาที่เปลี่ยน -->
+      <div class="movers" id="chg-movers">
+        <div class="mover build">
+          <div class="label"><span class="arrow">▲</span> OI เพิ่มมากสุดที่สไตรค์</div>
+          <div class="strike" id="mv-build">—</div>
+          <div class="delta up" id="mv-build-delta"></div>
+          <div class="sub" id="mv-build-sub"></div>
+        </div>
+        <div class="mover unwind">
+          <div class="label"><span class="arrow">▼</span> OI ลดมากสุดที่สไตรค์</div>
+          <div class="strike" id="mv-unwind">—</div>
+          <div class="delta down" id="mv-unwind-delta"></div>
+          <div class="sub" id="mv-unwind-sub"></div>
+        </div>
+        <div class="mover net">
+          <div class="label">ΔOI สุทธิทั้งกระดาน</div>
+          <div class="strike" id="mv-net">—</div>
+          <div class="sub" id="mv-net-sub"></div>
+        </div>
+      </div>
+
+      <!-- คำอธิบายทิศทางแบบอ่านเข้าใจทันที (ไม่ต้องตีความสีเอง) -->
+      <div class="dir-caption" aria-hidden="true">
+        <span class="down">◀ OI ลด (ปิดสถานะ)</span>
+        <span class="up">OI เพิ่ม (สะสมใหม่) ▶</span>
+      </div>
+
+      <!-- กราฟแนวนอน: สไตรค์ละแถว เพิ่มไปขวา (เขียว) ลดไปซ้าย (แดง)
+           เส้นศูนย์อยู่กลางเสมอ · ความสูงตั้งจาก JS ตามจำนวนสไตรค์ -->
+      <div class="chart-box change fade-swap" id="chg-box">
         <div id="chart-chg"></div>
       </div>
+      <div class="hint" id="chg-hint">แท่งขวา (เขียว) = OI เพิ่ม · แท่งซ้าย (แดง) = OI ลด · ⚡ = เปลี่ยนแปลงผิดปกติเทียบประวัติของสไตรค์นั้นเอง</div>
     </section>
   </div>
 

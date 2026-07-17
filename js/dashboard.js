@@ -12,6 +12,10 @@
   const M = Metrics;
   const $ = (id) => document.getElementById(id);
 
+  /* ฟีเจอร์ที่พักไว้พัฒนาต่อ — เปิด ivSmile คู่กับลบ hidden
+     ของปุ่มแท็บใน index.html */
+  const FEATURES = { ivSmile: false };
+
   /* อ่านค่าสีจาก CSS tokens — แก้ธีมใน styles.css แล้วกราฟเปลี่ยนตาม */
   const css = getComputedStyle(document.documentElement);
   const token = (name) => css.getPropertyValue(name).trim();
@@ -81,6 +85,7 @@
      ค่าตั้งต้นร่วมของ ECharts ให้เข้ากับธีม (ตามไฟล์ดีไซน์)
      ============================================================ */
   const CHART_FONT = token('--font-sans') || 'IBM Plex Sans, sans-serif';
+  const MONO_FONT = token('--font-mono') || 'IBM Plex Mono, monospace';
 
   function baseOption() {
     return {
@@ -89,6 +94,7 @@
       textStyle: { fontFamily: CHART_FONT, color: COLOR.textMuted, fontSize: 12 },
       tooltip: {
         trigger: 'axis',
+        confine: true, // จอแคบ: tooltip ไม่หลุดขอบจอ
         backgroundColor: COLOR.surfaceRaise,
         borderColor: COLOR.border,
         textStyle: { color: COLOR.textSecondary, fontSize: 12.5 },
@@ -202,6 +208,7 @@
   }
 
   function activateTab(name) {
+    if (name === 'iv' && !FEATURES.ivSmile) return;
     if (state.tab === name) return;
     state.tab = name;
     document.querySelectorAll('.tabs button').forEach((b) => {
@@ -537,6 +544,10 @@
         label: {
           formatter: `Max Pain ${fmtInt(maxPain)}`, color: COLOR.textSecondary,
           backgroundColor: COLOR.surfaceRaise, padding: 5, borderRadius: 6, fontSize: 11,
+          /* Spot กับ Max Pain มักอยู่ใกล้กัน — ดันป้ายนี้ต่ำลงมา
+             ให้คนละระดับกับป้าย Spot (ตำแหน่ง inside จะหมุนป้ายตามเส้น
+             เลยใช้ offset แทน — ป้ายยังแนวนอนอ่านง่าย) */
+          offset: [0, 26],
         },
       });
     }
@@ -544,7 +555,7 @@
     if (!state.oiChart) state.oiChart = echarts.init($('chart-oi'));
     state.oiChart.setOption({
       ...baseOption(),
-      grid: { left: 56, right: 20, top: 20, bottom: 40 },
+      grid: { left: 8, right: 16, top: 24, bottom: 8, containLabel: true },
       tooltip: {
         ...baseOption().tooltip,
         axisPointer: { type: 'shadow' },
@@ -583,7 +594,9 @@
     const strikes = M.strikesOf(sd);
     const past = M.nDaysBack(state.hist, state.chgWindow);
     /* history ไม่พอสำหรับกรอบนี้ → ไม่พล็อต (การเทียบกับ 0 จะหลอกตา) */
-    if (!past) return { strikes, values: strikes.map(() => null), havePast: false };
+    if (!past) {
+      return { strikes, values: strikes.map(() => null), breakdown: {}, havePast: false };
+    }
     const chg = M.oiChange(sd, past.series[state.seriesName]);
 
     const values = strikes.map((k) => {
@@ -593,7 +606,8 @@
       if (c.call === null && c.put === null) return null;
       return M.numOr0(c.call) + M.numOr0(c.put); // รวมสองฝั่ง
     });
-    return { strikes, values, havePast: !!past };
+    /* breakdown: ให้ tooltip/movers แจกแจง Call/Put ได้ในมุมมอง "รวม" */
+    return { strikes, values, breakdown: chg, havePast: true };
   }
 
   /* สไตรค์นี้ผิดปกติไหมใน view ปัจจุบัน (เฉพาะกรอบ 1D) */
@@ -607,51 +621,176 @@
     return null;
   }
 
+  /* กล่องสรุป "วันนี้เกิดอะไรขึ้น" เหนือกราฟ — สไตรค์เป็นพระเอก
+     ตามด้วยจำนวนสัญญาที่เปลี่ยน อ่านคำตอบได้ก่อนไล่ดูแท่ง */
+  function renderMovers(strikes, values, breakdown, havePast) {
+    /* กล่องเพิ่ม/ลด: id = สไตรค์, id-delta = จำนวนสัญญา, id-sub = แจกแจง */
+    const setBox = (id, strike, delta, sub) => {
+      $(id).textContent = strike;
+      $(id + '-delta').textContent = delta;
+      $(id + '-sub').textContent = sub;
+    };
+
+    if (!havePast) {
+      setBox('mv-build', '—', '', '');
+      setBox('mv-unwind', '—', '', '');
+      $('mv-net').textContent = '—';
+      $('mv-net').className = 'strike';
+      $('mv-net-sub').textContent = '';
+      return;
+    }
+
+    /* แจกแจง Call/Put เฉพาะมุมมอง "รวม" — มุมมองแยกฝั่งไม่ต้องอธิบายซ้ำ */
+    const bd = (k) => {
+      if (state.chgSide !== 'both') return '';
+      const c = breakdown[String(k)] || {};
+      return `Call ${fmtSigned(c.call ?? null)} · Put ${fmtSigned(c.put ?? null)}`;
+    };
+
+    let build = null, unwind = null, net = 0, any = false;
+    values.forEach((v, i) => {
+      if (v === null) return;
+      any = true;
+      net += v;
+      if (v > 0 && (build === null || v > values[build])) build = i;
+      if (v < 0 && (unwind === null || v < values[unwind])) unwind = i;
+    });
+
+    if (build !== null) {
+      setBox('mv-build', String(strikes[build]),
+        `${fmtSigned(values[build])} สัญญา`, bd(strikes[build]));
+    } else {
+      setBox('mv-build', '—', '', 'ไม่มีสไตรค์ที่ OI เพิ่ม');
+    }
+    if (unwind !== null) {
+      setBox('mv-unwind', String(strikes[unwind]),
+        `${fmtSigned(values[unwind])} สัญญา`, bd(strikes[unwind]));
+    } else {
+      setBox('mv-unwind', '—', '', 'ไม่มีสไตรค์ที่ OI ลด');
+    }
+
+    const sideLabel = { both: 'Call+Put', call: 'Call', put: 'Put' }[state.chgSide];
+    $('mv-net').textContent = any ? fmtSigned(net) : '—';
+    $('mv-net').className = 'strike' + (net > 0 ? ' up' : net < 0 ? ' down' : '');
+    $('mv-net-sub').textContent =
+      `${sideLabel} · เทียบ ${state.chgWindow} วันทำการก่อน`;
+  }
+
   function updateChgChart() {
-    const { strikes, values, havePast } = chgDataForView();
+    const { strikes, values, breakdown, havePast } = chgDataForView();
     const sideLabel = { both: 'Call+Put', call: 'Call', put: 'Put' }[state.chgSide];
 
+    renderMovers(strikes, values, breakdown, havePast);
+
     $('chg-hint').textContent = havePast
-      ? `${sideLabel} เทียบ ${state.chgWindow} วันทำการก่อน · เขียว = เพิ่ม แดง = ลด · ⚡ = ผิดปกติเทียบประวัติสไตรค์นั้นเอง (1D)`
+      ? `${sideLabel} เทียบ ${state.chgWindow} วันทำการก่อน · แท่งขวา (เขียว) = เพิ่ม · แท่งซ้าย (แดง) = ลด · ⚡ = ผิดปกติเทียบประวัติสไตรค์นั้นเอง (1D)`
       : `history ยังไม่พอสำหรับกรอบ ${state.chgWindow} วัน`;
 
+    /* สูงตามจำนวนสไตรค์: แถวละ ~30px ทุกสไตรค์ได้พื้นที่อ่านสบาย */
+    const box = $('chg-box');
+    box.style.height =
+      Math.min(820, Math.max(380, strikes.length * 30 + 80)) + 'px';
+
+    /* จอแคบ: ป้ายตัวเลขกินสัดส่วนพื้นที่กราฟมากขึ้น — ยืดแกนเผื่อมากขึ้น
+       ไม่งั้นป้ายของแท่งยาวสุดโดนตัดที่ขอบกราฟ */
+    const axisPad = box.clientWidth < 520 ? 1.5 : 1.22;
+
+    /* ป้ายตัวเลขบนแท่ง: เฉพาะ 3 อันดับที่ขยับแรงสุด + สไตรค์ผิดปกติ
+       (ติดป้ายทุกแท่ง = อ่านไม่ออก, ไม่ติดเลย = ต้องชี้ทีละแท่ง) */
+    const top3 = values
+      .map((v, i) => ({ abs: Math.abs(v ?? 0), i }))
+      .filter((x) => x.abs > 0)
+      .sort((a, b) => b.abs - a.abs)
+      .slice(0, 3)
+      .map((x) => x.i);
+
+    const data = values.map((v, i) => {
+      const u = unusualAt(strikes[i]);
+      const positive = (v ?? 0) >= 0;
+      return {
+        value: v,
+        itemStyle: {
+          color: positive ? COLOR.up : COLOR.down,
+          /* มุมโค้งเฉพาะปลายแท่ง (ฝั่งที่ชี้ออกจากเส้นศูนย์) */
+          borderRadius: positive ? [0, 3, 3, 0] : [3, 0, 0, 3],
+        },
+        label: v !== null && (top3.includes(i) || u) ? {
+          show: true,
+          position: positive ? 'right' : 'left',
+          color: COLOR.textSecondary,
+          fontSize: 12,
+          fontFamily: MONO_FONT,
+          formatter: () => (u ? '⚡' : '') + fmtSigned(v),
+        } : undefined,
+      };
+    });
+
     if (!state.chgChart) state.chgChart = echarts.init($('chart-chg'));
+    state.chgChart.resize(); // ความสูง container เพิ่งเปลี่ยนตามจำนวนสไตรค์
     state.chgChart.setOption({
       ...baseOption(),
-      grid: { left: 56, right: 20, top: 20, bottom: 40 },
+      grid: { left: 8, right: 16, top: 10, bottom: 8, containLabel: true },
       tooltip: {
         ...baseOption().tooltip,
         axisPointer: { type: 'shadow' },
         formatter: (params) => {
-          const k = strikes[params[0].dataIndex];
-          let s = `สไตรค์ ${k}<br/>ΔOI ${sideLabel}: ${fmtSigned(params[0].value)}`;
+          const p = params[0];
+          const k = strikes[p.dataIndex];
+          let s = `สไตรค์ ${k}<br/>ΔOI ${sideLabel}: ${fmtSigned(p.value)}`;
+          if (state.chgSide === 'both') {
+            const c = breakdown[String(k)] || {};
+            s += `<br/>Call ${fmtSigned(c.call ?? null)} · Put ${fmtSigned(c.put ?? null)}`;
+          }
           const u = unusualAt(k);
           if (u) s += `<br/>⚡ ผิดปกติฝั่ง ${u.side} (z = ${u.z.toFixed(1)})`;
           return s;
         },
       },
+      /* แนวนอน: แกนตั้ง = สไตรค์ (สูงอยู่บน) แกนนอน = ΔOI
+         ทิศของแท่ง (ซ้าย/ขวาจากเส้นศูนย์) บอกทางซ้ำกับสี
+         จึงอ่านได้แม้แยกเขียว/แดงไม่ออก */
       xAxis: {
-        ...strikeAxis(strikes),
-        data: strikes.map((k) => (unusualAt(k) ? `⚡${k}` : String(k))),
+        type: 'value',
+        /* แกนสมมาตร: เส้นศูนย์อยู่กลางกราฟเสมอ ไม่เอียงตามฝั่งที่ค่าโต
+           ส่วนเผื่อ (axisPad) กันป้ายตัวเลขท้ายแท่งยาวสุดโดนตัดที่ขอบ */
+        min: ({ min, max }) => {
+          const m = Math.max(Math.abs(min), Math.abs(max));
+          return isFinite(m) && m > 0 ? -m * axisPad : min;
+        },
+        max: ({ min, max }) => {
+          const m = Math.max(Math.abs(min), Math.abs(max));
+          return isFinite(m) && m > 0 ? m * axisPad : max;
+        },
+        axisLine: { show: false },
+        splitLine: { lineStyle: { color: COLOR.grid } },
+        axisLabel: {
+          color: COLOR.textMuted, fontSize: 12,
+          /* ขอบแกนเป็นค่าที่ยืดออกมา (ไม่ใช่เลขกลมๆ) — ไม่ต้องโชว์ */
+          showMinLabel: false,
+          showMaxLabel: false,
+          formatter: (v) =>
+            (v > 0 ? '+' : '') + (Math.abs(v) >= 1000 ? v / 1000 + 'K' : v),
+        },
       },
-      yAxis: valueAxis((v) =>
-        (v > 0 ? '+' : '') + (Math.abs(v) >= 1000 ? v / 1000 + 'K' : v)),
+      yAxis: {
+        type: 'category',
+        data: strikes.map(String),
+        axisLine: { lineStyle: { color: COLOR.border } },
+        axisLabel: {
+          color: COLOR.textSecondary, fontSize: 12,
+          fontFamily: MONO_FONT, interval: 0,
+        },
+      },
       series: [{
         name: `ΔOI ${sideLabel}`,
         type: 'bar',
-        data: values,
-        /* สีตามทิศทาง: เพิ่ม=เขียว ลด=แดง (ทิศของแท่งบอกซ้ำอีกชั้น
-           จึงไม่ได้พึ่งสีอย่างเดียว) */
-        itemStyle: {
-          color: (p) => (p.value >= 0 ? COLOR.up : COLOR.down),
-          borderRadius: [3, 3, 0, 0],
-        },
-        barMaxWidth: 20,
+        data,
+        barMaxWidth: 18,
         markLine: {
           silent: true, symbol: 'none',
-          lineStyle: { color: COLOR.textMuted, width: 1 },
+          lineStyle: { color: COLOR.textSecondary, width: 1 },
           label: { show: false },
-          data: [{ yAxis: 0 }],
+          data: [{ xAxis: 0 }], // เส้นศูนย์กลาง — แกนหลักของการอ่านกราฟนี้
         },
       }],
     }, true);
@@ -666,6 +805,7 @@
      - ซีรีส์ไกลใช้เส้นประ: แยกเส้นได้แม้ไม่เห็นสี (CVD/พิมพ์ขาวดำ)
      ============================================================ */
   function renderIvSmile() {
+    if (!FEATURES.ivSmile) return; // พักไว้พัฒนาต่อ
     if (state.ivChart) return;
     const d = state.data;
     /* สีรองรับ 2 ซีรีส์ — ใช้ 2 ซีรีส์ใกล้สุด (ไกลกว่านั้นสภาพคล่องต่ำ) */
@@ -714,7 +854,7 @@
       ...baseOption(),
       animationDuration: 900,
       animationEasing: 'cubicOut',
-      grid: { left: 56, right: 20, top: 40, bottom: 40 },
+      grid: { left: 8, right: 16, top: 40, bottom: 8, containLabel: true },
       legend: { top: 0, textStyle: { color: COLOR.textSecondary, fontSize: 12.5 } },
       tooltip: {
         ...baseOption().tooltip,

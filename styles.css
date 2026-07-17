@@ -8,20 +8,22 @@
    ============================================================ */
 
 :root {
-  /* ---- สีหลักตามดีไซน์: Call = น้ำเงิน, Put = ทอง ---- */
+  /* ---- สีหลักตามดีไซน์: Call = น้ำเงิน, Put = ทอง ----
+          ทุกคู่สีผ่าน validator (CVD + contrast บนพื้น --surface-card) */
   --clr-call: #3d74e0;
-  --clr-put:  #b8902e;
+  --clr-put:  #b68e2c;
   --clr-call-soft: rgba(61, 116, 224, 0.16);
-  --clr-put-soft:  rgba(184, 144, 46, 0.18);
+  --clr-put-soft:  rgba(182, 142, 44, 0.18);
 
   /* ---- สีเส้น IV Smile ต่อซีรีส์ (คนละความหมายกับ Call/Put)
           ซีรีส์ไกลใช้เส้นประเสริมอีกชั้น แยกได้แม้ไม่เห็นสี ---- */
   --clr-series-near: #3d74e0;     /* ซีรีส์ใกล้ (front month) */
-  --clr-series-far:  #8c7ae6;     /* ซีรีส์ไกล = ม่วง */
+  --clr-series-far:  #d16bb0;     /* ซีรีส์ไกล = ชมพู (ม่วงเดิมใกล้น้ำเงินเกิน) */
 
-  /* ---- สีทิศทาง (OI เพิ่ม/ลด, ราคาขึ้น/ลง) ---- */
-  --clr-up:   #3fae71;
-  --clr-down: #d8564c;
+  /* ---- สีทิศทาง (OI เพิ่ม/ลด, ราคาขึ้น/ลง)
+          เขียวอมฟ้า/แดงส้ม: คู่นี้แยกได้แม้ตาบอดสีแดง-เขียว ---- */
+  --clr-up:   #2aa78c;
+  --clr-down: #e0564a;
 
   /* ---- สีสถานะ/แจ้งเตือน ---- */
   --clr-warn: #fab219;
@@ -82,6 +84,20 @@
 * { box-sizing: border-box; }
 
 html { -webkit-text-size-adjust: 100%; }
+
+/* คีย์บอร์ด/สวิตช์คอนโทรล: เห็นตำแหน่ง focus ชัดเจนเสมอ */
+:where(button, select, a):focus-visible {
+  outline: 2px solid var(--clr-call);
+  outline-offset: 2px;
+  border-radius: var(--radius-ctrl);
+}
+
+/* จอสัมผัส (มือถือ/iPad): ปุ่มทุกตัวโตพอสำหรับนิ้ว */
+@media (pointer: coarse) {
+  .seg button { padding: 9px 14px; }
+  .tabs button { padding: 12px 18px; }
+  select.series-picker { padding: 12px 14px; }
+}
 
 body {
   margin: 0;
@@ -210,11 +226,18 @@ select.series-picker option { background: var(--surface-card); color: var(--text
 
 /* ============ tabs ============ */
 
+/* sticky: เลื่อนลงไปแค่ไหนก็สลับแท็บได้ทันที ไม่ต้องเลื่อนกลับขึ้นบน */
 .tabs {
+  position: sticky;
+  top: 0;
+  z-index: 30;
   display: flex;
   gap: var(--space-1);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding-bottom: var(--space-3);
+  padding: var(--space-2) 0 var(--space-3);
+  background: rgba(13, 15, 19, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .tabs button {
@@ -421,6 +444,13 @@ select.series-picker option { background: var(--surface-card); color: var(--text
   flex-basis: 100%;
 }
 
+/* hint ใต้กราฟ (นอก card-head เช่นของ OI change) — โตกว่า hint บนหัวการ์ด
+   เพราะเป็นคำอธิบายวิธีอ่านกราฟ ไม่ใช่เชิงอรรถ */
+.card > .hint {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
 .card-head .spacer { flex: 1; }
 
 /* legend เอง (นอก Chart.js) */
@@ -449,14 +479,101 @@ select.series-picker option { background: var(--surface-card); color: var(--text
 
 .chart-box { position: relative; width: 100%; }
 .chart-box > div { width: 100%; height: 100%; } /* container ของ ECharts */
-.chart-box.tall  { height: 340px; }
-.chart-box.short { height: 240px; }
+.chart-box.tall  { height: 420px; }
 .chart-box.iv    { height: 480px; }
+/* กราฟ OI change แนวนอน: สูงตามจำนวนสไตรค์ (JS ตั้ง height ตรงๆ)
+   จำกัดความกว้างและจัดกลางการ์ด — จอกว้างมากแท่งจะได้ไม่จมหายใน
+   พื้นที่ว่างสองข้าง · min-height กันกระตุกระหว่างรอข้อมูล */
+.chart-box.change {
+  min-height: 360px;
+  max-width: 920px;
+  margin-inline: auto;
+}
 @media (max-width: 560px) {
-  .chart-box.tall  { height: 260px; }
-  .chart-box.short { height: 200px; }
+  .chart-box.tall  { height: 300px; }
   .chart-box.iv    { height: 320px; }
 }
+
+/* ============ top movers (สรุปคำตอบ "วันนี้เกิดอะไรขึ้น" เหนือกราฟ) ============ */
+
+.movers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.mover {
+  background: var(--surface-raise);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* กล่องเพิ่ม/ลด: แถบสีข้าง + พื้นจางสีเดียวกัน ให้เห็นเป็นไฮไลต์ ไม่ใช่เชิงอรรถ */
+.mover.build {
+  box-shadow: inset 3px 0 0 var(--clr-up), var(--shadow-card);
+  background: rgba(42, 167, 140, 0.08);
+}
+.mover.unwind {
+  box-shadow: inset 3px 0 0 var(--clr-down), var(--shadow-card);
+  background: rgba(224, 86, 74, 0.07);
+}
+
+.mover .label {
+  color: var(--text-label);
+  font-size: var(--fs-kicker);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+.mover.build .label .arrow  { color: var(--clr-up); }
+.mover.unwind .label .arrow { color: var(--clr-down); }
+
+/* สไตรค์ = พระเอกของกล่อง */
+.mover .strike {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.9rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+.mover .strike.up   { color: var(--clr-up); }
+.mover .strike.down { color: var(--clr-down); }
+
+.mover .delta {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.mover .delta.up   { color: var(--clr-up); }
+.mover .delta.down { color: var(--clr-down); }
+
+.mover .sub {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+/* คำอธิบายทิศทางเหนือกราฟ OI change — บอกเป็นคำพูด ไม่ต้องเดาจากสี
+   ความกว้างเท่ากราฟ (จัดกลางเหมือนกัน) ให้ลูกศรชี้ตรงฝั่งของแท่งจริงๆ */
+.dir-caption {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: 0.84rem;
+  font-weight: 600;
+  max-width: 920px;
+  width: 100%;
+  margin: 0 auto -4px;
+}
+.dir-caption .up   { color: var(--clr-up); }
+.dir-caption .down { color: var(--clr-down); }
 
 /* ============ empty state (แท็บ OI Change ตอน history ไม่พอ) ============ */
 
@@ -553,9 +670,23 @@ table.strikes td:first-child {
 }
 table.strikes tr:last-child td { border-bottom: 0; }
 
+/* คอลัมน์ Strike ตรึงซ้าย: เลื่อนตารางในจอแคบแล้วยังรู้ว่าอ่านแถวไหนอยู่
+   (ต้องมีพื้นทึบ ไม่งั้นตัวเลขคอลัมน์อื่นลอดมาให้เห็นตอนเลื่อน) */
+table.strikes th:first-child,
+table.strikes td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface-card);
+}
+
 /* แถว ATM / Max Pain: พื้นจาง + เส้น accent ซ้าย (ตั้งค่าจาก JS ผ่าน class) */
 table.strikes tr.atm td { background: rgba(61, 116, 224, 0.07); }
-table.strikes tr.atm td:first-child { box-shadow: inset 2px 0 0 var(--clr-call); }
+table.strikes tr.atm td:first-child {
+  box-shadow: inset 2px 0 0 var(--clr-call);
+  /* เซลล์ sticky ต้องทึบ — ผสมสี highlight ลงบนพื้นการ์ดแทน rgba โปร่ง */
+  background: color-mix(in srgb, var(--clr-call) 8%, var(--surface-card));
+}
 table.strikes tr.mp  td:first-child { box-shadow: inset 2px 0 0 var(--text-muted); }
 
 /* ป้าย ATM / MAX PAIN ท้ายตัวเลขสไตรค์ */
@@ -630,6 +761,29 @@ td .volhot.put  { color: var(--clr-put); }
   padding: 1px 6px;
   border-radius: 4px;
   font-family: var(--font-mono);
+}
+
+/* ============ responsive: มือถือ ============ */
+
+@media (max-width: 640px) {
+  .card { padding: 16px 14px; }
+  .tile { padding: 14px 14px 16px; }
+
+  /* tile 2 คอลัมน์เสมอ: กว้างพอสำหรับตัวเลข ไม่ยาวจนต้องเลื่อนมาก */
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  /* header เรียงลง: ชื่อ → วันที่ → dropdown เต็มแถว กดง่าย */
+  .topbar { gap: 10px; }
+  select.series-picker { flex: 1 1 100%; width: 100%; }
+
+  .hero { gap: 20px; }
+  .movers { gap: 8px; }
+
+  /* แท็บกินเต็มแถว แบ่งกันเท่าๆ — โซนกดใหญ่ขึ้น */
+  .tabs button { flex: 1; text-align: center; }
 }
 
 /* ============ animations ตอนโหลดหน้า ============ */
