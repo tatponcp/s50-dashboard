@@ -285,9 +285,7 @@
     const pcr = M.pcr(sd, spot);
     const atmIv = M.atmIV(sd, spot);
     const ivHist = M.ivHistoryOf(state.hist, state.seriesName);
-    const rank = M.ivRank(atmIv, ivHist.map((x) => x.iv));
     const range = M.expectedRange(spot, atmIv, dte);
-    const skew = M.skew(sd, spot);
 
     /* unusual flag (1D) ต่อสไตรค์ต่อฝั่ง — ใช้ทั้งกราฟและตาราง
        ถ้าไม่มี history เลย อย่าคำนวณ ΔOI (จะกลายเป็น OI เต็มก้อน) */
@@ -333,18 +331,7 @@
       ? `ที่สไตรค์ ${fmtInt(M.atmStrike(sd, spot))}` : '';
     renderIvSpark(ivHist, atmIv);
 
-    renderIvRank(rank);
     renderDte(dte);
-
-    if (skew) {
-      countUp($('stat-skew'), skew.skew,
-        (v) => (v >= 0 ? '+' : '') + v.toFixed(2), 0.25);
-      $('stat-skew-sub').textContent =
-        `Put ${skew.putStrike} @${fmt(skew.putIV)} − Call ${skew.callStrike} @${fmt(skew.callIV)}`;
-    } else {
-      $('stat-skew').textContent = '–';
-      $('stat-skew-sub').textContent = 'IV ฝั่ง OTM ไม่พอคำนวณ';
-    }
 
     /* ---- กราฟ + ตาราง ----
        กราฟของแท็บ OI Change / IV Smile สร้างครั้งแรกตอนเปิดแท็บ
@@ -411,22 +398,6 @@
       sub.textContent = `หมดอายุซีรีส์ ${state.seriesName}`;
       sub.className = 'sub';
     }
-  }
-
-  /* ============================================================
-     IV Rank / Percentile (ต้องมี history ≥ 20 วัน)
-     ============================================================ */
-  function renderIvRank(rank) {
-    const el = $('stat-ivrank');
-    const sub = $('stat-ivrank-sub');
-    if (rank.insufficient) {
-      el.innerHTML = '<span class="not-enough">ข้อมูลสะสมยังไม่พอ</span>';
-      sub.textContent = `มี ${rank.days} วัน (ต้องการอย่างน้อย 20 วัน)`;
-      return;
-    }
-    countUp(el, rank.rank, (v) => Math.round(v) + '%', 0.2);
-    sub.textContent =
-      `Percentile ${Math.round(rank.percentile)} · ช่วง ${rank.min.toFixed(1)}–${rank.max.toFixed(1)}% (${rank.days} วัน)`;
   }
 
   /* ============================================================
