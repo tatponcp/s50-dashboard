@@ -4,6 +4,9 @@ webapp/
 # ไฟล์ชั่วคราวของ Python
 __pycache__/
 .venv/
+# pip ในเครื่องนี้ prefix เพี้ยน อาจเผลอสร้าง Lib/Scripts ในโปรเจกต์ — กันไว้
+Lib/
+Scripts/
 
 # ไฟล์ session ของเครื่องมือช่วยเขียนโค้ด
 .claude/

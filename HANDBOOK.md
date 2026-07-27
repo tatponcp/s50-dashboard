@@ -52,8 +52,10 @@ s50-dashboard/
 │   ├── metrics.js        ← สูตรคำนวณ (Max Pain, PCR, ...)
 │   └── dashboard.js      ← วาดกราฟ/ตาราง/animation
 ├── scraper/
-│   ├── tfex_scraper.py   ← ตัวดึงข้อมูลจาก TFEX (หัวใจของระบบ)
-│   └── requirements.txt  ← รายชื่อ library ที่ scraper ใช้
+│   ├── tfex_scraper.py     ← ตัวดึงข้อมูลจาก TFEX (หัวใจของระบบ)
+│   ├── supabase_upload.py  ← ส่งข้อมูลขึ้น Supabase (คลังถาวร — ดูข้อ 7.5)
+│   ├── supabase_schema.sql ← โครงตาราง Supabase (รันครั้งเดียวตอนตั้งค่า)
+│   └── requirements.txt    ← รายชื่อ library ที่ scraper ใช้
 ├── .github/workflows/
 │   └── update-data.yml   ← ตารางเวลาอัตโนมัติ "ทุกเย็นให้รัน scraper แล้ว commit"
 ├── tools/
@@ -161,6 +163,47 @@ python scraper/tfex_scraper.py
 | แก้ข้อความบนหน้าเว็บ | `index.html` (ข้อความส่วนใหญ่อยู่ในนี้ตรงๆ ค้นหาแล้วแก้ได้เลย) |
 
 หลังแก้ → commit + push → Pages อัปเดตเว็บให้เองใน 1-2 นาที
+
+---
+
+## 7.5 คลังข้อมูลถาวรบน Supabase (ตั้งครั้งเดียว)
+
+`data.json` เก็บ history แค่ ~60 วัน (พอสำหรับ dashboard) แต่ **Supabase
+เก็บทุกวันตลอดไป** ไว้เป็นคลังข้อมูลจริง ต่อยอด IV Rank ระยะยาว / backtest
+ได้ในอนาคต — เป็น**ส่วนเสริม** ถ้าไม่ตั้งค่า ระบบก็ยังทำงานปกติ (แค่ข้ามการอัป)
+
+**ตั้งค่า 3 ขั้น (ทำครั้งเดียว):**
+
+1. **สร้างตาราง** — เข้า Supabase project → **SQL Editor** → เปิดไฟล์
+   `scraper/supabase_schema.sql` แล้ว copy ไปวางรัน (รันซ้ำได้ไม่ error)
+
+2. **ใส่ Secret ให้ GitHub Actions** — เข้า repo → **Settings → Secrets and
+   variables → Actions → New repository secret** เพิ่ม 2 ตัว:
+   - `SUPABASE_URL` = URL ของ project (เช่น `https://xxxx.supabase.co`)
+   - `SUPABASE_SERVICE_KEY` = **service_role** key (อยู่ใน Supabase →
+     Settings → API) — ตัวนี้ข้าม RLS ได้ **เก็บเป็นความลับ ห้าม commit ลง repo**
+
+   > พอมี Secret ครบ รอบ scraper ทุกเย็นจะอัปข้อมูลขึ้น Supabase ให้เองอัตโนมัติ
+
+3. **ยกประวัติเดิมขึ้น (backfill ครั้งเดียว)** — เพื่อเอา history ที่มีอยู่ใน
+   `data.json` ขึ้นไปด้วย รันในเครื่อง (Windows PowerShell):
+   ```powershell
+   # เครื่องนี้เรียก Python ด้วย `py` (ไม่ใช่ python) และ pip ตรงๆ เพี้ยน
+   # → ใช้ venv แยก environment ให้สะอาด (venv สร้าง pip ที่ทำงานได้เอง)
+   py -m venv .venv
+   .venv\Scripts\python -m pip install requests
+   $env:SUPABASE_URL="https://xxxx.supabase.co"
+   $env:SUPABASE_SERVICE_KEY="<service_role key>"
+   .venv\Scripts\python scraper\supabase_upload.py --backfill
+   ```
+   คำสั่งนี้ upsert ทุกวันใน `data.json` (idempotent — รันซ้ำได้ ไม่เกิดข้อมูลซ้ำ)
+   · `.venv/` ถูก gitignore ไว้แล้ว ไม่ปนเข้า repo
+
+**เช็คว่าขึ้นจริง:** Supabase → Table Editor → `daily_summary` / `options_series`
+ควรเห็นแถวข้อมูล · ใน log ของ Actions จะเห็นบรรทัด `☁ อัปขึ้น Supabase แล้ว: ...`
+
+**ไฟล์ที่เกี่ยวข้อง:** `scraper/supabase_upload.py` (ตัวส่งข้อมูล) ·
+`scraper/supabase_schema.sql` (โครงตาราง) · การอัปรายวัน scraper เรียกให้เองท้าย `main()`
 
 ---
 

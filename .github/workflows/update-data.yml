@@ -34,6 +34,11 @@ jobs:
         run: pip install -r scraper/requirements.txt
 
       - name: Run scraper
+        # ส่ง Supabase credentials ให้ scraper อัปข้อมูลขึ้นคลังถาวรด้วย
+        # (ไม่ตั้ง Secret ก็ยังรันได้ — scraper จะข้ามการอัป Supabase เอง)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python scraper/tfex_scraper.py
 
       - name: Commit updated data

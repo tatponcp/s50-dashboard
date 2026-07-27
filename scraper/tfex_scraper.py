@@ -278,6 +278,14 @@ def main() -> None:
     print(f"✅ เขียน {DATA_FILE.name} แล้ว "
           f"(history {len(payload['history'])} วัน)")
 
+    # อัปขึ้น Supabase (คลังข้อมูลถาวร) — เป็นส่วนเสริม ถ้าพังไม่ทำ scraper ล้ม
+    # เพราะ data.json คือแหล่งหลักที่ dashboard ใช้ อัปไม่สำเร็จก็แค่เตือน
+    try:
+        from supabase_upload import upload_payload
+        upload_payload(payload)
+    except Exception as e:
+        print(f"⚠ อัปขึ้น Supabase ไม่สำเร็จ (data.json เขียนแล้ว ไม่กระทบ dashboard): {e}")
+
 
 if __name__ == "__main__":
     main()
