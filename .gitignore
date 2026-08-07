@@ -1,12 +1,11 @@
-# โปรเจกต์ทดลอง React (ยังไม่ใช้จริง — dashboard หลักคือ index.html ที่ root)
-webapp/
-
 # ไฟล์ชั่วคราวของ Python
 __pycache__/
 .venv/
-# pip ในเครื่องนี้ prefix เพี้ยน อาจเผลอสร้าง Lib/Scripts ในโปรเจกต์ — กันไว้
-Lib/
-Scripts/
+# pip ในเครื่องนี้ prefix เพี้ยน อาจเผลอสร้าง Lib/Scripts ที่ root โปรเจกต์ — กันไว้
+# ("/" นำหน้า = anchor ที่ root เท่านั้น ไม่งั้นจะไปบัง src/lib/ ของแอปอื่นด้วย
+# เพราะ Windows จับคู่ .gitignore แบบไม่สนตัวพิมพ์เล็ก-ใหญ่)
+/Lib/
+/Scripts/
 
 # ไฟล์ session ของเครื่องมือช่วยเขียนโค้ด
 .claude/
