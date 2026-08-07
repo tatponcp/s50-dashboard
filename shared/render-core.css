@@ -1,0 +1,294 @@
+/* ============================================================
+   shared/render-core.css — สไตล์การ์ด/component ของ Morning Brief
+   ------------------------------------------------------------
+   ใช้ร่วมกันทั้ง internal/ (preview) และ client/ (จริง) เพื่อให้
+   สิ่งที่ IC เห็นตอน preview ตรงกับสิ่งที่ลูกค้าเห็นจริง
+   ตัวแปรสี (--mb-*) มีค่า default ไว้ในนี้ — ฝั่งไหนอยาก override
+   ก็แค่ตั้งค่าใหม่ทับใน :root ของไฟล์ตัวเอง โดยโหลด CSS ไฟล์ตัวเอง
+   หลังไฟล์นี้เสมอ
+
+   ธีม (ส.ค. 2026): navy หมึก + ทอง — หัวข้อเป็น serif (Fraunces)
+   ตัวเลขเป็น mono (JetBrains Mono) เนื้อความเป็น Inter/Plex Thai
+   โหมดสว่างเป็นกระดาษครีม ไม่ใช่ navy อ่อน
+   ============================================================ */
+:root {
+  /* ---- typography ---- */
+  --mb-font-display: "Fraunces", "IBM Plex Sans Thai", Georgia, serif;
+  --mb-font-sans: "Inter", "IBM Plex Sans Thai", system-ui, -apple-system, "Segoe UI", "Noto Sans Thai", sans-serif;
+  --mb-font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
+
+  /* ---- พื้นผิว (โหมดมืด = ค่าเริ่มต้น) ---- */
+  --mb-surface-page: #0a0f1c;
+  --mb-surface-card: #0f1830;
+  --mb-surface-raise: #131e3a;
+  --mb-border: #1e2b4a;
+  --mb-border-strong: #2a3a5c;
+
+  --mb-text-primary: #edeff3;
+  --mb-text-secondary: #9aa6bd;
+  --mb-text-muted: #5e6a87;
+
+  /* ---- accent ---- */
+  --mb-accent-gold: #c9a227;
+  --mb-accent-gold-ink: #c9a227;      /* สีทองสำหรับ "ตัวอักษร" (โหมดสว่างจะเข้มขึ้น) */
+  --mb-accent-gold-soft: #8a7434;
+  --mb-accent-gold-bg: rgba(201, 162, 39, 0.1);
+  --mb-accent-cyan: #4f9ecf;
+  --mb-accent-green: #2fa890;
+  --mb-accent-purple: #8c7de0;
+  --mb-pos: #2fa890;                   /* บวก/ขึ้น */
+  --mb-neg: #d9614f;                   /* ลบ/ลง */
+
+  --mb-radius: 14px;
+  --mb-radius-sm: 10px;
+  --mb-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --mb-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.mb-mono { font-family: var(--mb-font-mono); font-variant-numeric: tabular-nums; }
+
+/* ================= การ์ดหลัก =================
+   แต่ละการ์ด "รับสี" ของหัวข้อตัวเองผ่าน --sec-accent (ตั้งจาก renderSection())
+   แล้วใช้สีนั้นเป็นเส้นขอบบน + มุมวงเล็บ + glow ตอน hover — เหมือนแผงควบคุม
+   ที่แต่ละช่องสัญญาณมีสีเฉพาะของตัวเอง ไม่ใช่แค่ทองซ้ำทุกใบ */
+.mb-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--mb-surface-card);
+  border: 1px solid var(--mb-border);
+  border-radius: var(--mb-radius);
+  padding: 30px 28px 26px;
+  margin-bottom: 22px;
+  scroll-margin-top: 24px;
+  transition: opacity 720ms var(--mb-ease), transform 720ms var(--mb-ease),
+    border-color 220ms var(--mb-ease), box-shadow 260ms var(--mb-ease);
+  opacity: 0;
+  transform: translateY(18px);
+}
+.mb-card.mb-revealed { opacity: 1; transform: translateY(0); }
+.mb-card::before {
+  content: '';
+  position: absolute; inset: 0 0 auto 0; height: 3px;
+  background: linear-gradient(90deg, transparent, var(--sec-accent, var(--mb-accent-gold)) 20%, var(--sec-accent, var(--mb-accent-gold)) 80%, transparent);
+  opacity: 0.85;
+}
+.mb-card::after {
+  content: '';
+  position: absolute; top: 16px; right: 16px; width: 15px; height: 15px;
+  border-top: 1.5px solid color-mix(in srgb, var(--sec-accent, var(--mb-accent-gold)) 60%, transparent);
+  border-right: 1.5px solid color-mix(in srgb, var(--sec-accent, var(--mb-accent-gold)) 60%, transparent);
+  opacity: 0.65; pointer-events: none;
+}
+.mb-card:hover {
+  border-color: color-mix(in srgb, var(--sec-accent, var(--mb-accent-gold)) 42%, var(--mb-border));
+  box-shadow: 0 28px 56px -36px color-mix(in srgb, var(--sec-accent, var(--mb-accent-gold)) 65%, transparent);
+}
+
+.mb-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.mb-head-left { display: flex; gap: 12px; align-items: flex-start; }
+.mb-card-head h2 {
+  margin: 0; font-family: var(--mb-font-display); font-weight: 500;
+  font-size: 1.2rem; letter-spacing: 0.01em; color: var(--mb-text-primary);
+}
+.mb-subtitle { margin: 3px 0 0; font-size: 0.8rem; color: var(--mb-text-secondary); line-height: 1.5; }
+.mb-icon { flex-shrink: 0; margin-top: 3px; color: var(--mb-accent-gold-ink); }
+
+.mb-date-badge {
+  display: inline-flex; align-items: center;
+  font-size: 0.75rem; color: var(--mb-text-secondary); background: transparent;
+  border: 1px solid var(--mb-border-strong); border-radius: 8px; padding: 7px 13px; white-space: nowrap;
+}
+.mb-date-badge b { color: var(--mb-text-primary); font-family: var(--mb-font-mono); font-weight: 500; margin-left: 4px; }
+
+/* จุดกะพริบบอกว่าเป็นข้อมูลที่เผยแพร่แล้ว (ไม่ใช่ของตกแต่งเฉยๆ — ผูกกับ dateBadge จริง) */
+.mb-live-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--mb-pos); margin-right: 7px; flex-shrink: 0;
+  animation: mb-pulse-ring 2.4s var(--mb-ease) infinite;
+}
+@keyframes mb-pulse-ring {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--mb-pos) 50%, transparent); }
+  70% { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+/* เลข section: สี่เหลี่ยมมนโปร่ง ไม่ใช่วงกลมทึบ — ให้เลขอ่านง่ายแต่ไม่แย่งสายตาหัวข้อ */
+.mb-sec-num {
+  width: 30px; height: 30px; border-radius: 9px;
+  background: var(--mb-accent-gold-bg); color: var(--sec-accent, var(--mb-accent-gold-ink));
+  border: 1px solid color-mix(in srgb, var(--sec-accent, var(--mb-accent-gold)) 32%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sec-accent, var(--mb-accent-gold)) 14%, transparent);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mb-font-mono); font-size: 0.8rem; font-weight: 500; flex-shrink: 0;
+}
+
+/* เส้นคั่นหัวทอง (ใช้ปิดท้ายบล็อกภาพรวม) */
+.mb-rule {
+  height: 1px; border: 0; margin: 30px 0 22px;
+  background: linear-gradient(90deg, var(--mb-accent-gold) 0 26px, var(--mb-border) 26px 100%);
+}
+
+/* ================= Big Picture (overview) ================= */
+.mb-bp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px; }
+.mb-bp-card {
+  background: var(--mb-surface-raise); border: 1px solid var(--mb-border);
+  border-radius: var(--mb-radius-sm); padding: 18px; position: relative;
+}
+.mb-bp-num {
+  width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--mb-accent-gold-soft);
+  color: var(--mb-accent-gold-ink); font-family: var(--mb-font-mono); font-size: 0.72rem;
+  display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
+}
+.mb-bp-card .mb-icon { position: absolute; top: 16px; right: 16px; opacity: 0.55; margin-top: 0; }
+.mb-bp-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 5px; }
+.mb-bp-text { font-size: 0.82rem; color: var(--mb-text-secondary); line-height: 1.6; }
+
+/* ---- การ์ดย่อ preview รายหัวข้อ ---- */
+.mb-mini-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+.mb-mini-card {
+  display: block; background: var(--mb-surface-raise); border: 1px solid var(--mb-border); border-radius: var(--mb-radius-sm);
+  padding: 12px 14px; text-decoration: none; color: inherit;
+  transition: border-color 180ms var(--mb-ease), transform 180ms var(--mb-ease);
+}
+.mb-mini-card:hover { border-color: var(--mb-accent-gold); transform: translateY(-1px); }
+.mb-mini-head { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; color: var(--mb-text-primary); }
+.mb-mini-head .mb-icon { width: 14px; height: 14px; margin-top: 0; }
+.mb-mini-legend { font-size: 0.72rem; color: var(--mb-text-muted); margin-top: 5px; line-height: 1.5; }
+
+/* ================= กล่อง สรุปสั้น / แปลความ / action ================= */
+.mb-box-grid { display: grid; gap: 14px; margin-bottom: 16px; }
+.mb-box-grid-2 { grid-template-columns: 1fr 1fr; }
+.mb-box-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.mb-box { background: var(--mb-surface-raise); border: 1px solid var(--mb-border); border-radius: var(--mb-radius-sm); padding: 16px; }
+.mb-box h3 {
+  display: flex; align-items: center; gap: 6px; margin: 0 0 11px;
+  font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: var(--mb-text-muted);
+}
+.mb-box h3 .mb-icon { width: 14px; height: 14px; margin-top: 0; }
+.mb-interp { font-size: 0.82rem; line-height: 1.7; color: var(--mb-text-secondary); margin: 0; }
+
+.mb-bullets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.mb-bullets li { display: flex; align-items: flex-start; gap: 8px; font-size: 0.82rem; color: var(--mb-text-secondary); line-height: 1.6; }
+.mb-bullets .mb-icon { width: 13px; height: 13px; margin-top: 4px; }
+
+.mb-actionlist { display: flex; flex-direction: column; margin: 0; }
+.mb-action-row {
+  display: grid; grid-template-columns: 16px auto 1fr; align-items: baseline; gap: 8px;
+  font-size: 0.82rem; padding: 7px 0; border-bottom: 1px solid var(--mb-border);
+}
+.mb-action-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.mb-action-row:first-child { padding-top: 0; }
+.mb-action-row .mb-icon { width: 13px; height: 13px; margin-top: 2px; }
+.mb-action-row dt { color: var(--mb-text-muted); margin: 0; }
+.mb-action-row dd { margin: 0; color: var(--mb-text-primary); font-weight: 500; text-align: right; }
+
+/* ================= ภาพแนบ ================= */
+.mb-img-grid { display: grid; gap: 10px; margin-bottom: 18px; }
+.mb-img-grid-1 { grid-template-columns: 1fr; }
+.mb-img-grid-2 { grid-template-columns: 1fr 1fr; }
+.mb-img-fig {
+  margin: 0; position: relative; background: var(--mb-surface-raise); border: 1px solid var(--mb-border);
+  border-radius: var(--mb-radius-sm); overflow: hidden;
+}
+.mb-img-fig img { width: 100%; display: block; cursor: zoom-in; transition: transform 320ms var(--mb-ease); }
+.mb-img-fig:hover img { transform: scale(1.015); }
+.mb-img-fig::after {
+  content: '⤢ ดูภาพขยาย'; position: absolute; top: 10px; right: 10px; pointer-events: none;
+  font-size: 0.68rem; color: var(--mb-text-primary); background: rgba(10, 15, 28, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 20px; padding: 4px 10px;
+  opacity: 0; transform: translateY(-3px); transition: opacity 200ms var(--mb-ease), transform 200ms var(--mb-ease);
+}
+.mb-img-fig:hover::after { opacity: 1; transform: translateY(0); }
+.mb-img-fig figcaption { font-size: 0.72rem; color: var(--mb-text-muted); padding: 8px 12px; }
+
+/* ---- lightbox: ดูภาพกราฟขยายเต็มจอ (คลิกที่ภาพ / Esc เพื่อปิด) ---- */
+.mb-lightbox {
+  position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center;
+  padding: 5vh 5vw; background: rgba(5, 8, 16, 0.86); backdrop-filter: blur(6px);
+  opacity: 0; visibility: hidden; transition: opacity 220ms var(--mb-ease), visibility 220ms var(--mb-ease);
+}
+.mb-lightbox.is-open { opacity: 1; visibility: visible; }
+.mb-lightbox img {
+  max-width: 100%; max-height: 100%; border-radius: 10px; object-fit: contain;
+  box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.6);
+  transform: scale(0.97); transition: transform 220ms var(--mb-ease-spring);
+}
+.mb-lightbox.is-open img { transform: scale(1); }
+.mb-lightbox-close {
+  position: absolute; top: 22px; right: 26px; width: 38px; height: 38px; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff;
+  font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background 180ms var(--mb-ease);
+}
+.mb-lightbox-close:hover { background: rgba(255, 255, 255, 0.18); }
+.mb-img-placeholder {
+  border: 1px dashed var(--mb-border-strong); border-radius: var(--mb-radius-sm); background: var(--mb-surface-raise);
+  min-height: 150px; display: flex; align-items: center; justify-content: center;
+  color: var(--mb-text-muted); font-size: 0.8rem; margin-bottom: 18px; text-align: center; padding: 24px;
+}
+
+/* ================= แถบตัวเลข ================= */
+.mb-stats-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px; margin-bottom: 18px;
+}
+.mb-stat-chip { background: var(--mb-surface-raise); border: 1px solid var(--mb-border); border-radius: var(--mb-radius-sm); padding: 11px 13px; }
+.mb-stat-label { display: block; font-size: 0.66rem; color: var(--mb-text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+.mb-stat-value { display: block; font-size: 0.95rem; font-weight: 500; color: var(--mb-text-primary); font-family: var(--mb-font-mono); font-variant-numeric: tabular-nums; }
+.mb-stat-value.is-pos { color: var(--mb-pos); text-shadow: 0 0 16px color-mix(in srgb, var(--mb-pos) 35%, transparent); }
+.mb-stat-value.is-neg { color: var(--mb-neg); text-shadow: 0 0 16px color-mix(in srgb, var(--mb-neg) 35%, transparent); }
+
+/* ================= ตารางย้อนหลัง ================= */
+.mb-history { margin-bottom: 18px; }
+.mb-history summary {
+  cursor: pointer; font-size: 0.76rem; color: var(--mb-accent-gold-ink); margin-bottom: 10px;
+  list-style: none; display: inline-flex; align-items: center; gap: 6px;
+}
+.mb-history summary::-webkit-details-marker { display: none; }
+.mb-history summary::before { content: '▸'; font-size: 0.7rem; transition: transform 160ms var(--mb-ease); }
+.mb-history[open] summary::before { transform: rotate(90deg); }
+.mb-table-scroll { overflow-x: auto; }
+.mb-history table { width: 100%; border-collapse: collapse; font-size: 0.75rem; font-family: var(--mb-font-mono); font-variant-numeric: tabular-nums; }
+.mb-history th, .mb-history td { padding: 8px 10px; border-bottom: 1px solid var(--mb-border); text-align: right; white-space: nowrap; }
+.mb-history th:first-child, .mb-history td:first-child { text-align: left; }
+.mb-history th {
+  color: var(--mb-text-muted); font-weight: 500; font-family: var(--mb-font-sans);
+  font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom-color: var(--mb-border-strong);
+}
+.mb-history td { color: var(--mb-text-secondary); }
+
+/* ================= แถบ insight ================= */
+.mb-insight-bar {
+  position: relative; overflow: hidden;
+  background: var(--mb-accent-gold-bg);
+  border: 1px solid var(--mb-accent-gold-soft);
+  border-radius: var(--mb-radius-sm); padding: 14px 18px;
+  font-size: 0.85rem; color: var(--mb-text-primary); line-height: 1.7;
+}
+.mb-insight-bar::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(100deg, transparent 35%, color-mix(in srgb, var(--mb-accent-gold) 22%, transparent) 50%, transparent 65%);
+  background-size: 220% 100%;
+  animation: mb-shimmer 7s ease-in-out infinite;
+}
+@keyframes mb-shimmer {
+  0% { background-position: 130% 0; }
+  55%, 100% { background-position: -30% 0; }
+}
+.mb-hl { color: var(--mb-accent-gold-ink); font-weight: 600; }
+
+@media (max-width: 720px) {
+  .mb-card { padding: 22px 18px; }
+  .mb-bp-grid, .mb-mini-grid, .mb-box-grid-2, .mb-box-grid-3 { grid-template-columns: 1fr; }
+  .mb-img-grid-2 { grid-template-columns: 1fr; }
+  .mb-card-head { flex-direction: column; gap: 10px; }
+  .mb-img-fig::after { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mb-card { transition: none; opacity: 1; transform: none; }
+  .mb-live-dot { animation: none; }
+  .mb-insight-bar::after { animation: none; }
+  .mb-img-fig img, .mb-lightbox, .mb-lightbox img { transition: none; }
+}

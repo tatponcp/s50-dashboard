@@ -202,6 +202,30 @@ python scraper/tfex_scraper.py
 **เช็คว่าขึ้นจริง:** Supabase → Table Editor → `daily_summary` / `options_series`
 ควรเห็นแถวข้อมูล · ใน log ของ Actions จะเห็นบรรทัด `☁ อัปขึ้น Supabase แล้ว: ...`
 
+### 7.6 ตรวจสุขภาพข้อมูล (`supabase_check.py`)
+
+สคริปต์อ่านอย่างเดียว (GET ล้วน ไม่แก้ข้อมูล ไม่พิมพ์ key) พิมพ์สรุป: จำนวนวันใน
+`daily_summary`, ช่วงวันที่, จำนวนแถว `options_series`, ซีรีส์ล่าสุด แล้ว **เทียบกับ
+`data.json` ในเครื่อง** ว่า Supabase มีครบหรือยัง
+
+**ตั้งครั้งเดียว** — สร้างไฟล์ `.env.local` ที่ root (gitignore ไว้แล้ว):
+```
+SUPABASE_URL=https://xxxx.supabase.co
+SUPABASE_SERVICE_KEY=<service_role key>
+```
+
+**รัน** (ตัวช่วยจะโหลด `.env.local` + เรียก `.venv` ให้เอง):
+```powershell
+.\scraper\run-supabase.ps1            # ตรวจสุขภาพข้อมูล
+.\scraper\run-supabase.ps1 backfill   # ยกประวัติขึ้น (เท่ากับ --backfill ข้อ 7.5)
+```
+
+ถ้ายังไม่มี `.venv`: `py -3 -m venv .venv` แล้ว
+`.\.venv\Scripts\python.exe -m pip install -r scraper\requirements.txt`
+
+ผลลัพธ์ที่ต้องการคือบรรทัดสุดท้าย `✅ ตรวจผ่าน: ข้อมูลบน Supabase ครบเท่ากับ (หรือมากกว่า)
+data.json` — ถ้าขึ้น `⚠ ยังไม่ครบ` ให้รัน backfill แล้วตรวจซ้ำ
+
 **ไฟล์ที่เกี่ยวข้อง:** `scraper/supabase_upload.py` (ตัวส่งข้อมูล) ·
 `scraper/supabase_schema.sql` (โครงตาราง) · การอัปรายวัน scraper เรียกให้เองท้าย `main()`
 
@@ -236,3 +260,97 @@ python scraper/tfex_scraper.py
 | **Vol/OI > 1** | วอลุ่มวันนี้มากกว่าสถานะคงค้าง = มีเงินใหม่เข้าผิดปกติที่สไตรค์นั้น |
 | **⚡ (ในกราฟ/ตาราง)** | OI สไตรค์นี้เปลี่ยนแรงผิดปกติเทียบกับพฤติกรรมของตัวมันเอง |
 | **DTE** | จำนวนวันเหลือก่อนซีรีส์หมดอายุ — ต่ำกว่า 5 วันจะมีแบนเนอร์เตือนให้เริ่มดูซีรีส์ถัดไป |
+
+---
+
+## 10. Morning Brief (feature เสริม — infographic สรุปตลาดตอนเช้า)
+
+ต่างจาก Options Dashboard ด้านบนที่ดึงข้อมูล**อัตโนมัติ 100%**
+Morning Brief เป็น infographic ที่ทีมงาน**กรอกมือ + แนบภาพกราฟมือ**
+ทุกเช้า แล้วกด publish ให้ขึ้นเว็บลูกค้า จึงแยกเป็น **2 โซนเด็ดขาด**:
+
+```
+internal/   ← โซน IC — กรอกข้อมูล/แนบภาพ/preview — รัน local เท่านั้น
+            ← .gitignore ไว้ทั้งโฟลเดอร์ ไม่ขึ้น git เลย (ดูเหตุผลข้อ 10.2)
+client/     ← โซน Client — เฉพาะไฟล์ที่ publish แล้ว ขึ้น GitHub Pages จริง
+shared/     ← โค้ด render การ์ด/สไตล์ที่ทั้งสองโซนใช้ร่วมกัน (public ได้ ไม่มีความลับ)
+```
+
+### 10.0 สร้างข้อความอัตโนมัติจากสัญญาณ (แทนพิมพ์ "แปลความ" เองทุกวัน)
+
+แต่ละ section (1-6) มีกล่อง **"สัญญาณวันนี้ → สร้างข้อความอัตโนมัติ"** — IC
+เลือก dropdown สัญญาณที่อ่านได้จากกราฟที่แนบ (เช่น section 1: ราคาขึ้น/ลง/ทรงตัว
++ OI เพิ่ม/ลด/ทรงตัว) แล้วกด **🪄 สร้างข้อความอัตโนมัติจากสัญญาณ** ระบบจะเติม
+"แปลความ" / "Action วันนี้ (มุมมอง)" / "Insight bar" ให้ตาม pattern คงที่
+(lookup table ล้วนๆ ไม่เรียก AI ใดๆ — ดูข้อจำกัด 10.3) — **ข้อความที่เติมยัง
+แก้มือต่อได้เสมอ** ถ้าไม่ตรงกับภาพจริงวันนั้น
+
+**แก้ pattern เอง** — กด **⚙ แก้กฎการวิเคราะห์** ใต้กล่องสัญญาณ จะเห็นตาราง
+กฎของทุก combo (เหมือนตาราง IF ใน Excel) แก้ข้อความช่องไหนก็บันทึกให้เองทันที
+กฎเก็บแยกจาก draft รายวันใน `localStorage` (คีย์ `mb-rules-v1`) จึงอยู่ข้ามวันได้
+ไม่ต้องตั้งใหม่ทุกเช้า — กด **รีเซ็ตกฎเป็นค่าเริ่มต้น** เพื่อกลับไปใช้ข้อความ
+เริ่มต้นในไฟล์ `internal/js/rules.js`
+
+**ไฟล์ที่เกี่ยวข้อง:** `internal/js/rules.js` (นิยามสัญญาณ + กฎเริ่มต้นของแต่ละ
+combo ต่อ section) · `internal/js/editor.js` ฟังก์ชัน `buildSignalBlock` /
+`buildRulesEditor` (ต่อ UI เข้ากับฟอร์ม) — สัญญาณที่เลือกไว้เก็บใน
+`draft.sections[id].signals` (ไม่ถูก publish ไป client — เป็นแค่ input
+ภายในของ IC console)
+
+### 10.1 วิธีใช้งาน (ทีมงาน)
+
+1. รัน local server ที่ root โปรเจกต์: `python -m http.server 8000`
+2. เปิด `http://localhost:8000/internal/edit.html` → กรอกฟอร์มแต่ละ
+   section + แปะภาพกราฟ (Ctrl+V / ลากไฟล์ / คลิกเลือกไฟล์) — auto-save
+   ลง `localStorage` ทุกครั้งที่พิมพ์
+3. กด **Preview** ดูตัวอย่างก่อน publish
+4. กด **Approve & Publish ทั้งหน้า** (หรือเลือก publish เฉพาะ section
+   จาก dropdown) — เบราว์เซอร์จะ**ดาวน์โหลดไฟล์ให้** (เขียนลง disk
+   ตรงๆ จาก JS ในเบราว์เซอร์ไม่ได้)
+5. ลากไฟล์ที่ดาวน์โหลดมาวางตามชื่อไฟล์:
+   - `*.png` → `client/images/`
+   - `{date}.json`, `index.json` → `client/data/`
+6. `git add client/ shared/ && git commit && git push` (internal/ ไม่ต้อง
+   add เพราะ gitignore ไว้แล้ว) → Pages เผยแพร่ให้เองใน 1-2 นาทีเหมือนเดิม
+
+เปิดดูผลลัพธ์จริงได้ที่ `client/index.html` (sidebar navigation
+เลือกดูรายวัน/รายหัวข้อ) — มีลิงก์จากหน้า dashboard หลัก (ปุ่ม
+"Morning Brief" มุมขวาบน header)
+
+### 10.1.1 หน้าตา / ธีม (ส.ค. 2026)
+
+Morning Brief ใช้ธีมของตัวเอง **แยกจาก dashboard หลัก** — navy หมึก + ทอง
+หัวข้อเป็น serif (Fraunces) ตัวเลขเป็น mono (JetBrains Mono) เนื้อความไทยตกไป
+IBM Plex Sans Thai · โหมดสว่างเป็น**กระดาษครีม** (ไม่ใช่ navy อ่อน)
+
+| อยากแก้อะไร | แก้ที่ไหน |
+|---|---|
+| สี/ฟอนต์/หน้าตาการ์ด (เห็นทั้ง preview และหน้าลูกค้า) | `shared/render-core.css` ส่วน `:root` |
+| โหมดสว่าง (สีครีม), sidebar, หัวเรื่องหน้า | `client/css/client.css` |
+| ฟอนต์ที่โหลด | `<link>` Google Fonts ใน `client/index.html` **และ** `internal/edit.html` (ต้องตรงกัน ไม่งั้น preview เพี้ยนจากของจริง) |
+
+เกร็ด: ค่าใน `stats` ที่ขึ้นต้นด้วย `+` / `-` จะถูกระบายสีเขียว/แดงให้เอง
+(สั่งทับได้ด้วย `"dir": "pos" | "neg" | "flat"` ในไฟล์ JSON) ·
+วันที่ในหน้าเว็บแสดงเป็น พ.ศ. ("06 ส.ค. 2569") แต่ **ในไฟล์ JSON ยังเป็น
+`YYYY-MM-DD` ค.ศ. เหมือนเดิม** — แปลงตอน render เท่านั้น
+
+### 10.2 ทำไม internal/ ต้อง .gitignore ทั้งโฟลเดอร์
+
+repo นี้ deploy GitHub Pages จาก **root ของ branch `main` ตรงๆ**
+ไม่มี build step หรือ path filter ใดๆ (ดู `.github/workflows/update-data.yml`
+— รันแค่ scraper แล้ว commit `data.json`) ดังนั้นไฟล์ไหนขึ้น `main`
+ก็ public ทันที ไม่มีขั้นตอนกรองระหว่างทาง — วิธีที่ปลอดภัยจริงคือ
+**ไม่ให้ `internal/` เข้า git เลย** (ไม่ใช่แค่ไม่ deploy)
+
+ผลคือโค้ด IC console ไม่มี git history ให้ (ยอมรับได้เพราะตอนนี้ใช้
+คนเดียว) — ถ้าจะเปิดให้ทีมช่วยแก้ฟอร์ม หรือย้ายไป host ที่รองรับ
+auth จริง (เช่น Vercel) ค่อยพิจารณาย้าย `internal/` เข้า private repo
+แยกหรือใช้ auth จริงตอนนั้น ไม่ใช่ตอนนี้
+
+### 10.3 ข้อจำกัดที่ตั้งใจ (อย่าแก้โดยไม่คุยกันก่อน)
+
+- **ห้ามเรียก AI/image-generation API ใดๆ** — ภาพทุกภาพมาจาก IC
+  upload/paste เท่านั้น (ประหยัด token + คุมคุณภาพภาพได้เอง)
+- **ไม่มีระบบ login** — access control ทำผ่านการแยก deploy เท่านั้น
+- Draft (ระหว่างกรอก) เก็บเป็น dataURL ใน `localStorage` เพื่อความง่าย
+  — ถ้าแนบภาพเยอะ/ใหญ่มากจนใกล้ขีดจำกัด (~5-10MB) ให้ publish บ่อยขึ้น

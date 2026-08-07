@@ -197,6 +197,22 @@ select.series-picker {
 select.series-picker:hover { background: var(--surface-hover); }
 select.series-picker option { background: var(--surface-card); color: var(--text-primary); }
 
+/* ลิงก์ไปหน้า Morning Brief (client/index.html) */
+.morning-brief-link {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-secondary);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  text-decoration: none;
+  background: var(--surface-raise);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  padding: 7px 14px;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.morning-brief-link:hover { background: var(--surface-hover); color: var(--clr-put); }
+
 /* ช่องเผื่ออนาคต: GEX Regime toggle (ยังไม่ implement — โปรเจกต์แยก) */
 .gex-slot {
   display: inline-flex;

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Morning Brief — S50 Options Dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230d0f13'/%3E%3Crect x='7' y='14' width='5' height='11' rx='1.5' fill='%233d74e0'/%3E%3Crect x='14' y='8' width='5' height='17' rx='1.5' fill='%233d74e0'/%3E%3Crect x='21' y='11' width='5' height='14' rx='1.5' fill='%23b68e2c'/%3E%3C/svg%3E">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="../shared/render-core.css">
+  <link rel="stylesheet" href="css/client.css">
+</head>
+<body>
+
+<div class="mb-shell">
+
+  <!-- ================= sidebar ================= -->
+  <aside class="mb-sidebar" id="mb-sidebar">
+    <div class="mb-sidebar-top">
+      <a class="mb-logo" href="../index.html">
+        <span class="mb-logo-mark">S</span>
+        <span class="mb-logo-text">Morning Brief<small>S50 Dashboard</small></span>
+      </a>
+      <button class="mb-collapse-btn" id="btn-collapse" aria-label="พับ/กาง sidebar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+    </div>
+
+    <div class="mb-theme-row">
+      <span class="mb-theme-label">โหมดสว่าง</span>
+      <button class="mb-theme-toggle" id="theme-toggle" role="switch" aria-checked="false" aria-label="สลับโหมดสว่าง"></button>
+    </div>
+
+    <div class="mb-sidebar-controls">
+      <select class="mb-date-picker" id="date-picker" aria-label="เลือกวันที่"></select>
+    </div>
+
+    <nav class="mb-nav" id="mb-nav" aria-label="สารบัญ Morning Brief">
+      <div class="mb-nav-group">
+        <div class="mb-nav-label">ภาพรวม</div>
+        <a class="mb-nav-link" href="#section-overview" data-target="section-overview">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v12H4z"/><path d="M4 10h16"/></svg>
+          <span>สรุปภาพรวม Action วันนี้</span>
+        </a>
+      </div>
+      <div class="mb-nav-group" id="nav-sections">
+        <div class="mb-nav-label">รายหัวข้อ</div>
+        <!-- เติมด้วย render.js ตาม section ที่มีในข้อมูลวันนั้นๆ -->
+      </div>
+    </nav>
+
+    <div class="mb-sidebar-foot" id="mb-sidebar-foot" hidden><span class="mb-pulse-dot"></span><span id="mb-published-label"></span></div>
+  </aside>
+
+  <!-- overlay สำหรับมือถือตอน sidebar เปิดแบบ bottom sheet -->
+  <div class="mb-sidebar-overlay" id="sidebar-overlay"></div>
+
+  <!-- ================= main content ================= -->
+  <main class="mb-main">
+    <button class="mb-hamburger" id="btn-hamburger" aria-label="เปิดเมนู">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      <span>สารบัญ</span>
+    </button>
+
+    <div id="mb-empty-state" class="mb-empty-state" hidden>
+      ยังไม่มี Morning Brief เผยแพร่ — กลับมาดูใหม่พรุ่งนี้เช้าครับ
+    </div>
+
+    <div id="mb-content"></div>
+
+    <footer class="mb-footer">
+      Morning Brief เป็นการสรุปมุมมองตลาดจากทีมงานเพื่อประกอบการตัดสินใจ ไม่ใช่คำแนะนำการลงทุน
+    </footer>
+  </main>
+
+</div>
+
+<script src="../shared/render-core.js"></script>
+<script src="js/render.js"></script>
+</body>
+</html>
