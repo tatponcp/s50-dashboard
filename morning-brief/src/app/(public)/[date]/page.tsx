@@ -1,10 +1,10 @@
-import { getMockBrief } from "@/lib/mockBriefs";
+import { getPublishedBrief } from "@/lib/supabase";
 import { BriefView } from "@/components/BriefView";
 
-// Phase 1: อ่านจาก mock data ในเครื่อง — Phase 2 จะเปลี่ยนไปอ่านจาก Supabase (mb_briefs, status='published')
+// Phase 2: อ่านจาก Supabase (mb_briefs, status='published') — RLS ป้องกันไม่ให้เห็น draft
 export default async function BriefPage({ params }: { params: Promise<{ date: string }> }) {
   const { date } = await params;
-  const brief = getMockBrief(date);
+  const brief = await getPublishedBrief(date);
 
   if (!brief) {
     return (
