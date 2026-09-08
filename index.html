@@ -3,49 +3,49 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>S50 Options Dashboard</title>
-  <!-- favicon: แท่ง Call/Put ย่อส่วน (inline SVG ไม่ต้องมีไฟล์แยก) -->
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230d0f13'/%3E%3Crect x='7' y='14' width='5' height='11' rx='1.5' fill='%233d74e0'/%3E%3Crect x='14' y='8' width='5' height='17' rx='1.5' fill='%233d74e0'/%3E%3Crect x='21' y='11' width='5' height='14' rx='1.5' fill='%23b68e2c'/%3E%3C/svg%3E">
+  <title>S50 Options Dashboard — Open Interest รายสไตรค์ แบบ End-of-Day</title>
+  <meta name="description" content="ภาพตลาด SET50 Index Options แบบ End-of-Day: Open Interest รายสไตรค์แบบ 3 มิติ, Max Pain, PCR, ATM IV และ Expected Range อัปเดตทุกเย็นวันทำการ">
+  <meta name="theme-color" content="#0b0f16">
 
-  <!-- ฟอนต์ตามดีไซน์: IBM Plex Sans (ละติน) + IBM Plex Sans Thai (ไทย) + IBM Plex Mono (ตัวเลข)
-       ต้องมี Plex Sans Thai แยก เพราะ IBM Plex Sans ไม่มีอักษรไทย
-       (ไม่ใส่ = ตัวไทย fallback เป็นฟอนต์ระบบ หน้าตาไม่เข้ากัน) -->
+  <!-- favicon: แท่ง Call/Put ย่อส่วน (inline SVG ไม่ต้องมีไฟล์แยก) -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2306080c'/%3E%3Crect x='7' y='14' width='5' height='11' rx='1.5' fill='%233d74e0'/%3E%3Crect x='14' y='8' width='5' height='17' rx='1.5' fill='%233d74e0'/%3E%3Crect x='21' y='11' width='5' height='14' rx='1.5' fill='%23b68e2c'/%3E%3C/svg%3E">
+
+  <!-- ฟอนต์: Chakra Petch = display (เหลี่ยม แบบหน้าปัดเครื่องมือ · มีไทย)
+       Anuphan = เนื้อความ/UI (เรียบ อ่านง่าย · มีไทย)
+       Spline Sans Mono = ตัวเลขทุกตัว (ความกว้างเท่ากัน เลขไม่ขยับตอนนับขึ้น) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&family=Chakra+Petch:wght@500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="styles.css">
 
-  <!-- ECharts (กราฟทั้งหมด — ตัวเดียวกับที่ไฟล์ดีไซน์ใช้) -->
-  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-  <!-- GSAP + CustomEase: ใช้เฉพาะตัวเลขนับขึ้น (CSS ทำไม่ได้) ด้วย ease เดียวกับ CSS -->
+  <!-- ECharts = กราฟ 2 มิติทั้งหมด · echarts-gl (Terrain 3 มิติ) โหลดทีหลัง
+       แบบ lazy ใน dashboard.js เพราะไฟล์ใหญ่ ไม่ควรถ่วงการโหลดหน้าแรก -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/CustomEase.min.js"></script>
 </head>
 <body>
-<div class="wrap">
+<a class="skip-link" href="#panel-overview">ข้ามไปเนื้อหาหลัก</a>
 
-  <!-- แถบไล่สี Call→Put บนสุด (accent ตามดีไซน์) -->
-  <div class="accent-bar reveal" style="--i:0"></div>
+<div class="deck">
 
-  <!-- ================= header ================= -->
-  <header class="topbar reveal" style="--i:0">
-    <div class="title-block">
-      <div class="eyebrow">Open Interest Daily Summary</div>
-      <h1>S50 Options Dashboard</h1>
-      <div class="subtitle">TFEX SET50 Index Options &middot; End-of-Day</div>
+  <!-- ================= command rail ================= -->
+  <header class="rail">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <i style="--h:11px;--c:var(--clr-call)"></i>
+        <i style="--h:17px;--c:var(--clr-call)"></i>
+        <i style="--h:14px;--c:var(--clr-put)"></i>
+      </span>
+      <span class="brand-name">
+        S50 Options
+        <small>TFEX SET50 Index Options · End-of-Day</small>
+      </span>
     </div>
     <span class="spacer"></span>
-    <!-- ช่องเผื่ออนาคต: GEX Regime (โปรเจกต์แยก) — ซ่อนไว้ให้ header
-         สะอาดตามดีไซน์ พอ GEX พร้อมค่อยลบ hidden ออก -->
-    <span class="gex-slot" title="เร็วๆ นี้ (โปรเจกต์แยก)" hidden>
-      <span class="switch"></span> GEX Regime
-    </span>
-    <!-- ลิงก์ไปหน้า Morning Brief (อัปเดตมือโดยทีมงาน แยกจาก Options
-         Dashboard ที่ดึงอัตโนมัติ — ดูรายละเอียดใน HANDBOOK.md) -->
-    <a class="morning-brief-link" href="client/index.html">Morning Brief</a>
-    <span class="date" id="data-date">—</span>
-    <select class="series-picker" id="series-picker" aria-label="เลือกซีรีส์"></select>
+    <select class="series-picker" id="series-picker" aria-label="เลือกซีรีส์สัญญา"></select>
+    <span class="date-chip"><span class="pulse" aria-hidden="true"></span><span id="data-date">—</span></span>
   </header>
 
   <!-- แจ้งเตือนเมื่อโหลด data.json ไม่ได้ (เช่น เปิดผ่าน file://) -->
@@ -57,31 +57,31 @@
 
   <!-- ================= rollover banner (DTE < 5) ================= -->
   <div class="banner" id="rollover-banner" role="alert">
-    <span class="icon">⚠️</span>
+    <span class="icon" aria-hidden="true">⚠</span>
     <div id="rollover-text"></div>
   </div>
 
   <!-- ================= tabs ================= -->
-  <nav class="tabs reveal" style="--i:1" role="tablist" aria-label="เลือก dashboard">
-    <button role="tab" data-tab="overview" aria-selected="true" class="active">Overview</button>
-    <button role="tab" data-tab="change" aria-selected="false">OI Change</button>
+  <nav class="tabs" role="tablist" aria-label="เลือกมุมมอง">
+    <button role="tab" data-tab="overview" aria-controls="panel-overview" aria-selected="true" class="active">ภาพรวม</button>
+    <button role="tab" data-tab="change" aria-controls="panel-change" aria-selected="false">OI เปลี่ยนแปลง</button>
     <!-- IV Smile: พักไว้พัฒนาต่อ — เปิดกลับโดยลบ hidden ตรงนี้
          และตั้ง FEATURES.ivSmile = true ใน js/dashboard.js -->
-    <button role="tab" data-tab="iv" aria-selected="false" hidden>IV Smile</button>
+    <button role="tab" data-tab="iv" aria-controls="panel-iv" aria-selected="false" hidden>IV Smile</button>
   </nav>
 
   <!-- ================= OVERVIEW ================= -->
-  <div class="panel" id="panel-overview">
+  <div class="panel" id="panel-overview" role="tabpanel" tabindex="-1">
 
-    <!-- hero: spot + expected range -->
-    <section class="hero reveal" style="--i:2">
-      <div>
-        <div class="label">SET50 Index (ปิดล่าสุด)</div>
+    <!-- hero: ราคาปิด + เครื่องมือวัด Expected Range -->
+    <section class="readout reveal" style="--i:0">
+      <div class="readout-price">
+        <div class="eyebrow">SET50 ปิดล่าสุด</div>
         <div class="spot-value" id="spot-value" data-countup>—</div>
         <div class="spot-chg" id="spot-chg"></div>
       </div>
-      <div class="range-box">
-        <div class="label" id="range-label">Expected Range ถึงวันหมดอายุ</div>
+      <div class="readout-range">
+        <div class="eyebrow" id="range-label">Expected Range ถึงวันหมดอายุ</div>
         <div class="range-track">
           <div class="range-band sigma1" id="band-sigma1"></div>
           <div class="range-band sigma05" id="band-sigma05"></div>
@@ -95,65 +95,102 @@
       </div>
     </section>
 
-    <!-- กราฟ OI by Strike -->
-    <section class="card reveal" style="--i:3">
+    <!-- ============ ตัวชูโรง: OI Terrain ============ -->
+    <section class="card terrain reveal" style="--i:1">
       <div class="card-head">
-        <h2 class="kicker">Open Interest per Strike</h2>
+        <h2>Open Interest รายสไตรค์</h2>
         <span class="spacer"></span>
-        <div class="legend">
-          <span class="key"><span class="swatch" style="background:var(--clr-call)"></span>Call OI</span>
-          <span class="key"><span class="swatch" style="background:var(--clr-put)"></span>Put OI</span>
+        <!-- คำอธิบายสีเปลี่ยนตามมุมมอง (2 มิติ = แท่ง Call/Put แยกกัน,
+             3 มิติ = แถบไล่สีบอกว่าสไตรค์นั้นฝั่งไหนถือครองมากกว่า) -->
+        <div class="legend" id="oi-legend"></div>
+        <div class="seg" id="seg-depth" role="group" aria-label="จำนวนวันย้อนหลังในมุมมอง 3 มิติ">
+          <button data-depth="5">5 วัน</button>
+          <button data-depth="10" class="active">10 วัน</button>
+          <button data-depth="20">20 วัน</button>
         </div>
-        <div class="hint" id="oi-hint"></div>
+        <div class="seg view" id="seg-view" role="group" aria-label="เลือกมุมมองกราฟ">
+          <button data-view="3d" class="active">3 มิติ</button>
+          <button data-view="2d">2 มิติ</button>
+        </div>
       </div>
-      <div class="chart-box tall">
-        <div id="chart-oi"></div>
+
+      <!-- เวทีกราฟ: 3 มิติกับ 2 มิติซ้อนที่เดียวกัน สลับด้วยปุ่มด้านบน -->
+      <div class="stage" id="oi-stage">
+        <div class="stage-view" id="view-3d">
+          <div id="chart-oi3d"></div>
+          <div class="stage-msg" id="terrain-loading" hidden><span class="spin" aria-hidden="true"></span>กำลังโหลดมุมมอง 3 มิติ…</div>
+          <div class="stage-msg" id="terrain-fallback" hidden></div>
+          <div class="orbit-hint" id="orbit-hint" aria-hidden="true">ลากเพื่อหมุน · เลื่อนล้อเพื่อซูม</div>
+        </div>
+        <div class="stage-view" id="view-2d" hidden>
+          <div id="chart-oi"></div>
+        </div>
       </div>
+
+      <!-- แถบอ่านค่าสไตรค์ที่กำลังชี้ — ผูกกราฟกับตารางเข้าด้วยกัน -->
+      <div class="focus-bar" id="focus-bar" tabindex="0" role="group"
+           aria-label="สไตรค์ที่กำลังดู กดลูกศรซ้ายขวาเพื่อเลื่อนสไตรค์">
+        <div class="focus-strike">
+          <span class="eyebrow">สไตรค์</span>
+          <span class="v" id="focus-strike">—</span>
+          <span class="focus-tag" id="focus-tag" hidden></span>
+        </div>
+        <dl class="focus-figs">
+          <div><dt>Call OI</dt><dd class="call" id="focus-coi">—</dd></div>
+          <div><dt>Put OI</dt><dd class="put" id="focus-poi">—</dd></div>
+          <div><dt>ΔOI 1D</dt><dd id="focus-chg">—</dd></div>
+          <div><dt>IV C / P</dt><dd id="focus-iv">—</dd></div>
+        </dl>
+        <div class="focus-help" id="focus-help">ชี้ที่กราฟหรือแถวในตาราง เพื่อล็อกดูสไตรค์นั้น</div>
+      </div>
+
+      <p class="hint" id="oi-hint"></p>
     </section>
 
     <!-- stat tiles -->
     <section class="stats">
-      <div class="tile reveal" style="--i:4">
+      <div class="tile reveal" style="--i:2">
         <div class="label">Max Pain</div>
         <div class="value" id="stat-maxpain" data-countup>—</div>
         <div class="sub" id="stat-maxpain-sub"></div>
       </div>
-      <div class="tile reveal" style="--i:5">
+      <div class="tile reveal" style="--i:3">
         <div class="label">PCR (Put/Call OI)</div>
         <div class="value" id="stat-pcr" data-countup>—</div>
         <div class="sub" id="stat-pcr-sub"></div>
       </div>
-      <div class="tile reveal" style="--i:6">
+      <div class="tile reveal" style="--i:4">
         <div class="label">ATM IV</div>
         <div class="value" id="stat-atmiv" data-countup>—</div>
         <div class="sub" id="stat-atmiv-sub"></div>
         <div class="spark" id="iv-spark"></div>
       </div>
-      <div class="tile reveal" style="--i:7">
-        <div class="label">Days to Expiry</div>
+      <div class="tile reveal" style="--i:5">
+        <div class="label">เหลือถึงวันหมดอายุ</div>
         <div class="value" id="stat-dte" data-countup>—</div>
         <div class="sub" id="stat-dte-sub"></div>
       </div>
     </section>
 
     <!-- ตารางรายสไตรค์ -->
-    <section class="card reveal" style="--i:10">
+    <section class="card reveal" style="--i:6">
       <div class="card-head">
         <h2>ตารางรายสไตรค์</h2>
+        <span class="spacer"></span>
         <div class="hint">Vol/OI &gt; 1 หมายถึงปริมาณซื้อขายวันนี้สูงกว่าสถานะคงค้าง (เงินใหม่เข้าผิดปกติ)</div>
       </div>
       <div class="table-scroll">
         <table class="strikes" id="strike-table">
           <thead>
             <tr>
-              <th>Strike</th>
-              <th>Call OI</th>
-              <th>ΔOI 1D</th>
-              <th>Vol/OI</th>
-              <th>Put OI</th>
-              <th>ΔOI 1D</th>
-              <th>Vol/OI</th>
-              <th>IV Call / Put</th>
+              <th scope="col">Strike</th>
+              <th scope="col">Call OI</th>
+              <th scope="col">ΔOI 1D</th>
+              <th scope="col">Vol/OI</th>
+              <th scope="col">Put OI</th>
+              <th scope="col">ΔOI 1D</th>
+              <th scope="col">Vol/OI</th>
+              <th scope="col">IV Call / Put</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -163,16 +200,16 @@
   </div>
 
   <!-- ================= OI CHANGE ================= -->
-  <div class="panel" id="panel-change" hidden>
+  <div class="panel" id="panel-change" role="tabpanel" tabindex="-1" hidden>
 
     <!-- แสดงแทนกราฟเมื่อยังไม่มี history ให้เทียบ (การเทียบกับ 0 จะหลอกตา) -->
     <section class="card empty-card" id="chg-empty" hidden>
-      <div class="empty-icon"></div>
+      <div class="empty-icon" aria-hidden="true"></div>
       <h2>OI เปลี่ยนแปลง</h2>
-      <div class="empty-text">
+      <p class="empty-text">
         ยังไม่มีข้อมูลสแนปช็อตย้อนหลังเพียงพอสำหรับเปรียบเทียบ 1D / 5D / 10D —
         ระบบจะเริ่มแสดงกราฟนี้หลังสะสมข้อมูล EOD อย่างน้อย 1 วันทำการ
-      </div>
+      </p>
     </section>
 
     <section class="card" id="chg-card">
@@ -195,13 +232,13 @@
            สไตรค์คือพระเอกของกล่อง — ตัวใหญ่สุด ตามด้วยจำนวนสัญญาที่เปลี่ยน -->
       <div class="movers" id="chg-movers">
         <div class="mover build">
-          <div class="label"><span class="arrow">▲</span> OI เพิ่มมากสุดที่สไตรค์</div>
+          <div class="label"><span class="arrow" aria-hidden="true">▲</span> OI เพิ่มมากสุดที่สไตรค์</div>
           <div class="strike" id="mv-build">—</div>
           <div class="delta up" id="mv-build-delta"></div>
           <div class="sub" id="mv-build-sub"></div>
         </div>
         <div class="mover unwind">
-          <div class="label"><span class="arrow">▼</span> OI ลดมากสุดที่สไตรค์</div>
+          <div class="label"><span class="arrow" aria-hidden="true">▼</span> OI ลดมากสุดที่สไตรค์</div>
           <div class="strike" id="mv-unwind">—</div>
           <div class="delta down" id="mv-unwind-delta"></div>
           <div class="sub" id="mv-unwind-sub"></div>
@@ -224,18 +261,16 @@
       <div class="chart-box change fade-swap" id="chg-box">
         <div id="chart-chg"></div>
       </div>
-      <div class="hint" id="chg-hint">แท่งขวา (เขียว) = OI เพิ่ม · แท่งซ้าย (แดง) = OI ลด · ⚡ = เปลี่ยนแปลงผิดปกติเทียบประวัติของสไตรค์นั้นเอง</div>
-  </section>
+      <p class="hint" id="chg-hint"></p>
+    </section>
   </div>
 
-  <!-- ================= IV SMILE ================= -->
-  <!-- แสดงทั้งซีรีส์ใกล้/ไกลพร้อมกันเสมอ (ไม่ตาม series picker)
-       เพราะประเด็นของกราฟนี้คือการเทียบโครงสร้าง IV ข้ามอายุสัญญา -->
-  <div class="panel" id="panel-iv" hidden>
+  <!-- ================= IV SMILE (พักไว้) ================= -->
+  <div class="panel" id="panel-iv" role="tabpanel" tabindex="-1" hidden>
     <section class="card">
       <div class="card-head">
         <h2>IV Smile รายสไตรค์</h2>
-        <!-- legend อยู่ในตัวกราฟ (ECharts) ตามดีไซน์ -->
+        <span class="spacer"></span>
         <div class="hint" id="iv-hint"></div>
       </div>
       <div class="chart-box iv">
@@ -245,7 +280,7 @@
   </div>
 
   <footer class="foot">
-    ข้อมูล End-of-Day เท่านั้น · ตัวชี้วัดทั้งหมดเป็นการอ่านตำแหน่งของตลาด ไม่ใช่คำแนะนำการลงทุน
+    ข้อมูล End-of-Day จาก TFEX · ตัวชี้วัดทั้งหมดเป็นการอ่านตำแหน่งของตลาด ไม่ใช่คำแนะนำการลงทุน
   </footer>
 </div>
 

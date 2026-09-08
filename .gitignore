@@ -13,8 +13,5 @@ __pycache__/
 # ความลับ Supabase (service_role key) — ห้ามขึ้น repo เด็ดขาด
 .env.local
 
-# โซน IC (Internal Console) ของ Morning Brief — ห้ามหลุด public เด็ดขาด
-# repo นี้ deploy GitHub Pages จาก root ของ main ตรงๆ ไม่มี build/branch
-# filter ใดๆ เลย ทางเดียวที่ปลอดภัยจริงคือไม่ให้ internal/ ขึ้น git เลย
-# (รันบนเครื่องนี้เท่านั้น — ดูรายละเอียดสถาปัตยกรรมใน HANDBOOK.md)
-internal/
+# โฟลเดอร์ของ Vercel CLI (สร้างตอนรัน `vercel` ในเครื่อง)
+.vercel/

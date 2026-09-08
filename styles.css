@@ -1,27 +1,30 @@
 /* ============================================================
    S50 Options Dashboard — styles.css
    ------------------------------------------------------------
-   Design tokens ทั้งหมดอยู่ใน :root ที่เดียว
-   อยากเปลี่ยนธีมสี/ระยะห่างทั้งเว็บ แก้ตรงนี้จุดเดียวพอ
-   ธีมปัจจุบันอิงไฟล์ดีไซน์ "S50 Options Dashboard.dc.html"
-   (Claude Design, 2026-07) — IBM Plex + น้ำเงิน/ทอง
+   ทิศทางดีไซน์ "The Deck" (2026-09)
+   หน้าเว็บคือแผงควบคุมที่มีแสงส่องจากด้านบน การ์ดทุกใบเป็น "แผ่นวัสดุ"
+   ที่มีขอบบนรับแสง (สีทองจางๆ = สีเดียวกับฝั่ง Put) และมีสันด้านล่าง
+   ความลึกในหน้านี้ใช้เพื่อ "บอกข้อมูล" ไม่ใช่เพื่อตกแต่ง —
+   ของ 3 มิติจริงมีชิ้นเดียวคือ OI Terrain
+   ------------------------------------------------------------
+   Design tokens ทั้งหมดอยู่ใน :root ที่เดียว แก้ธีมทั้งเว็บที่นี่จุดเดียว
+   ชื่อ token ชุด --clr-* / --text-* / --font-* ถูกอ่านโดย js/dashboard.js
+   ด้วย (เพื่อให้สีกราฟตามธีม) — เปลี่ยนชื่อต้องแก้ที่นั่นด้วย
    ============================================================ */
 
 :root {
-  /* ---- สีหลักตามดีไซน์: Call = น้ำเงิน, Put = ทอง ----
-          ทุกคู่สีผ่าน validator (CVD + contrast บนพื้น --surface-card) */
+  /* ---- สีข้อมูล: ผ่าน validator ทั้ง contrast และตาบอดสี (อย่าเปลี่ยน
+          โดยไม่รัน validator ซ้ำ) Call = น้ำเงิน, Put = ทอง ---- */
   --clr-call: #3d74e0;
   --clr-put:  #b68e2c;
   --clr-call-soft: rgba(61, 116, 224, 0.16);
   --clr-put-soft:  rgba(182, 142, 44, 0.18);
 
-  /* ---- สีเส้น IV Smile ต่อซีรีส์ (คนละความหมายกับ Call/Put)
-          ซีรีส์ไกลใช้เส้นประเสริมอีกชั้น แยกได้แม้ไม่เห็นสี ---- */
-  --clr-series-near: #3d74e0;     /* ซีรีส์ใกล้ (front month) */
-  --clr-series-far:  #d16bb0;     /* ซีรีส์ไกล = ชมพู (ม่วงเดิมใกล้น้ำเงินเกิน) */
+  /* ---- สีเส้น IV Smile ต่อซีรีส์ (คนละความหมายกับ Call/Put) ---- */
+  --clr-series-near: #3d74e0;
+  --clr-series-far:  #d16bb0;
 
-  /* ---- สีทิศทาง (OI เพิ่ม/ลด, ราคาขึ้น/ลง)
-          เขียวอมฟ้า/แดงส้ม: คู่นี้แยกได้แม้ตาบอดสีแดง-เขียว ---- */
+  /* ---- สีทิศทาง (OI เพิ่ม/ลด, ราคาขึ้น/ลง) — แยกได้แม้ตาบอดสีแดง-เขียว ---- */
   --clr-up:   #2aa78c;
   --clr-down: #e0564a;
 
@@ -29,25 +32,47 @@
   --clr-warn: #fab219;
   --clr-warn-soft: rgba(250, 178, 25, 0.12);
 
-  /* ---- พื้นผิว ---- */
-  --surface-page: #0d0f13;        /* พื้นหลังเพจ */
-  --surface-card: #161a21;        /* การ์ด/กราฟ */
-  --surface-raise: #1b2029;       /* ปุ่ม, chip, dropdown, แถบ range */
-  --surface-hover: #262a33;       /* ปุ่ม active / hover */
+  /* ---- พื้นผิว: ไล่จากลึกสุด (ฉากหลังของกราฟ 3 มิติ) ขึ้นมาหาผิวที่ยกสูงสุด ---- */
+  --void:  #06080c;   /* ก้นเวที — ที่ที่ของ 3 มิติวางอยู่ */
+  --deck:  #0b0f16;   /* พื้นหลังเพจ */
+  --slab:  #141a24;   /* หน้าการ์ด */
+  --riser: #1c2432;   /* สันข้างที่ยกขึ้น: ปุ่ม, chip, dropdown */
+  --riser-hi: #26303f; /* ปุ่มตอน hover / active */
+
+  /* ชื่อเดิมที่ dashboard.js ใช้อ่านค่า — ชี้มาที่ token ชุดใหม่ */
+  --surface-page: var(--deck);
+  --surface-card: var(--slab);
+  --surface-raise: var(--riser);
+  --surface-hover: var(--riser-hi);
+
+  /* ---- แสง: ทิศเดียวตลอดทั้งหน้า มาจากด้านบน ---- */
+  --lit:      rgba(214, 178, 102, 0.13);  /* ขอบบนรับแสง (โทนทอง = สี Put) */
+  --lit-hard: rgba(214, 178, 102, 0.26);  /* ขอบบนของชิ้นที่ยกสูง */
+  --hairline: rgba(255, 255, 255, 0.05);
+  --shade:    rgba(0, 0, 0, 0.55);        /* สันด้านล่างของแผ่นวัสดุ */
 
   /* ---- ตัวหนังสือ ---- */
-  --text-primary:   #f4f6f8;
-  --text-secondary: #a7afbd;
-  --text-label:     #8b93a3;      /* หัวข้อ uppercase เล็กๆ บน tile/การ์ด */
-  --text-muted:     #6b7280;
+  --text-primary:   #f1f5fa;
+  --text-secondary: #a9b3c2;
+  --text-label:     #8a94a5;
+  --text-muted:     #6f7a8b;
 
   /* ---- เส้น/กรอบ ---- */
-  --grid-line: #242832;           /* gridline ในกราฟ + เส้นคั่นตาราง */
+  --grid-line: #1e2531;
   --border: rgba(255, 255, 255, 0.07);
-  --border-strong: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.12);
 
-  /* ---- เงาการ์ด (ตามดีไซน์) ---- */
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 28px -20px rgba(0, 0, 0, 0.55);
+  /* ---- ความลึกของแผ่นวัสดุ: ขอบบนรับแสง + เส้นผม + สันล่าง + เงาทอดพื้น ---- */
+  --slab-depth:
+    inset 0 1px 0 var(--lit),
+    inset 0 0 0 1px var(--hairline),
+    0 2px 0 var(--shade),
+    0 22px 46px -30px rgba(0, 0, 0, 0.95);
+  --slab-depth-hi:
+    inset 0 1px 0 var(--lit-hard),
+    inset 0 0 0 1px var(--border-strong),
+    0 4px 0 var(--shade),
+    0 26px 48px -26px rgba(0, 0, 0, 0.95);
 
   /* ---- ระยะห่าง ---- */
   --space-1: 4px;
@@ -58,774 +83,900 @@
   --space-6: 32px;
 
   /* ---- รูปทรง ---- */
-  --radius-card: 10px;
+  --radius-card: 12px;
   --radius-ctrl: 8px;
   --radius-pill: 999px;
 
-  /* ---- ฟอนต์: Plex Sans สำหรับข้อความ / Plex Mono สำหรับตัวเลข ---- */
-  --font-sans: "IBM Plex Sans", "IBM Plex Sans Thai", system-ui, -apple-system, "Segoe UI", "Noto Sans Thai", sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
-  --fs-hero: clamp(2.1rem, 6vw, 2.5rem);   /* ~40px */
-  --fs-stat: 1.5rem;                        /* 24px ตามดีไซน์ */
-  --fs-body: 0.875rem;                      /* 14px */
-  --fs-small: 0.78rem;
-  --fs-kicker: 0.656rem;                    /* 10.5px หัวข้อ uppercase */
+  /* ---- ฟอนต์: display เหลี่ยม / เนื้อความเรียบ / ตัวเลข monospace ---- */
+  --font-display: "Chakra Petch", "Anuphan", system-ui, sans-serif;
+  --font-sans: "Anuphan", system-ui, -apple-system, "Segoe UI", "Noto Sans Thai", sans-serif;
+  --font-mono: "Spline Sans Mono", ui-monospace, "Cascadia Mono", monospace;
 
-  /* ---- Motion (Emil Kowalski style: ease-out แรงต้นนุ่มปลาย) ---- */
+  --fs-hero: clamp(2.6rem, 7vw, 3.5rem);
+  --fs-stat: 1.6rem;
+  --fs-body: 0.875rem;
+  --fs-small: 0.78rem;
+  --fs-kicker: 0.66rem;
+
+  /* ---- Motion: ease-out แรงต้นนุ่มปลาย ---- */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --dur-fast: 180ms;
-  --dur-med: 400ms;
-  --dur-slow: 500ms;
-  --stagger: 40ms;                /* หน่วงการ์ดทีละใบตอนโหลด */
+  --dur-fast: 160ms;
+  --dur-med: 380ms;
+  --dur-slow: 520ms;
+  --stagger: 55ms;
+
+  --rail-h: 58px;
 }
 
 /* ============ base ============ */
 
 * { box-sizing: border-box; }
 
-html { -webkit-text-size-adjust: 100%; }
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  /* แถบ tab เป็น sticky — ให้ anchor ไม่ไปหลบใต้แถบ */
+  scroll-padding-top: calc(var(--rail-h) + 60px);
+}
 
-/* คีย์บอร์ด/สวิตช์คอนโทรล: เห็นตำแหน่ง focus ชัดเจนเสมอ */
-:where(button, select, a):focus-visible {
+body {
+  margin: 0;
+  background: var(--deck);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: 1.55;
+  /* แสงจางๆ จากมุมบนซ้าย ให้ทั้งหน้ามีทิศของแสงเดียวกับการ์ดทุกใบ */
+  background-image:
+    radial-gradient(1100px 620px at 12% -8%, rgba(61, 116, 224, 0.09), transparent 62%),
+    radial-gradient(900px 520px at 92% 2%, rgba(182, 142, 44, 0.05), transparent 60%);
+  background-attachment: fixed;
+}
+
+::selection { background: rgba(61, 116, 224, 0.38); }
+
+[hidden] { display: none !important; }
+
+h1, h2, h3 { margin: 0; font-family: var(--font-display); font-weight: 600; }
+
+p { margin: 0; }
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: var(--riser);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* ตัวเลขทุกตัวในหน้านี้กว้างเท่ากัน — ไม่ขยับตอนนับขึ้นหรือเปลี่ยนซีรีส์ */
+.spot-value, .value, .strike, .delta, .strikes td, .focus-figs dd,
+.range-labels, .date-chip, .mono { font-variant-numeric: tabular-nums; }
+
+/* คีย์บอร์ด: เห็นตำแหน่ง focus ชัดเจนเสมอ */
+:where(button, select, a, [tabindex]):focus-visible {
   outline: 2px solid var(--clr-call);
   outline-offset: 2px;
   border-radius: var(--radius-ctrl);
 }
 
-/* จอสัมผัส (มือถือ/iPad): ปุ่มทุกตัวโตพอสำหรับนิ้ว */
-@media (pointer: coarse) {
-  .seg button { padding: 9px 14px; }
-  .tabs button { padding: 12px 18px; }
-  select.series-picker { padding: 12px 14px; }
-}
-
-body {
-  margin: 0;
-  background: var(--surface-page);
+.skip-link {
+  position: absolute;
+  left: 12px;
+  top: -60px;
+  z-index: 50;
+  background: var(--riser);
   color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: var(--fs-body);
-  line-height: 1.5;
+  padding: 10px 16px;
+  border-radius: var(--radius-ctrl);
+  box-shadow: var(--slab-depth-hi);
+  transition: top var(--dur-fast) var(--ease-out);
 }
+.skip-link:focus { top: 12px; }
 
-::selection { background: rgba(76, 141, 255, 0.35); }
+.spacer { flex: 1 1 auto; }
 
-[hidden] { display: none !important; }
-
-.wrap {
-  max-width: 1360px;
+.deck {
+  max-width: 1320px;
   margin: 0 auto;
-  padding: 28px 32px 60px;
+  padding: 0 28px 72px;
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
 }
-@media (max-width: 640px) {
-  .wrap { padding: 18px 16px 44px; }
-}
 
-/* ตัวเลขทั้งหมดใช้ mono + tabular ให้คอลัมน์ตรงกัน */
-.mono, .spot-value, .tile .value, .topbar .date,
-table.strikes tbody, .range-labels span:first-child, .range-labels span:last-child {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
+/* ============ command rail ============ */
 
-/* ============ accent bar (แถบไล่สีบนสุด) ============ */
-
-.accent-bar {
-  height: 2px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, var(--clr-call), var(--clr-put) 65%, transparent);
-}
-
-/* ============ header ============ */
-
-.topbar {
+.rail {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  height: var(--rail-h);
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
+  gap: var(--space-3);
+  /* ขอบล่างเป็นเส้นเดียว ไม่มีการ์ด — แถบนี้เป็นชั้นบนสุด ไม่ใช่แผ่นวัสดุ */
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--deck) 78%, transparent);
+  backdrop-filter: blur(14px) saturate(1.3);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  /* ยืดพื้นหลังให้เต็มขอบจอ ทั้งที่เนื้อหายังอยู่ในกรอบ max-width */
+  margin: 0 -28px;
+  padding: 0 28px;
 }
 
-.title-block {
+.brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
+
+/* โลโก้: แท่ง OI สามแท่ง ยืนบนแผ่นวัสดุเล็กๆ ใบเดียวกับการ์ด */
+.brand-mark {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  padding: 7px 7px 6px;
+  border-radius: 7px;
+  background: linear-gradient(180deg, #1b2331, #10151d);
+  box-shadow: inset 0 1px 0 var(--lit-hard), 0 1px 0 var(--shade);
+}
+.brand-mark i {
+  display: block;
+  width: 4px;
+  height: var(--h);
+  border-radius: 1.5px;
+  background: var(--c);
+}
+
+.brand-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  line-height: 1.15;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  min-width: 0;
 }
-
-.eyebrow {
-  font-size: var(--fs-kicker);
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  color: var(--text-label);
-  text-transform: uppercase;
-}
-
-.topbar h1 {
-  font-size: 1.25rem;      /* 20px */
-  font-weight: 600;
-  margin: 0;
-  letter-spacing: 0.005em;
-}
-
-.subtitle {
-  font-size: 0.75rem;
+.brand-name small {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 0.7rem;
+  letter-spacing: 0;
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.topbar .date {
-  color: var(--text-secondary);
-  font-size: 0.78rem;
-}
-
-.topbar .spacer { flex: 1; }
-
-select.series-picker {
-  background: var(--surface-raise);
-  color: var(--text-primary);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-ctrl);
-  padding: 9px 14px;
-  font: inherit;
+.series-picker {
+  appearance: none;
   font-family: var(--font-mono);
-  font-size: 0.81rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background var(--dur-fast) var(--ease-out);
-}
-select.series-picker:hover { background: var(--surface-hover); }
-select.series-picker option { background: var(--surface-card); color: var(--text-primary); }
-
-/* ลิงก์ไปหน้า Morning Brief (client/index.html) */
-.morning-brief-link {
-  display: inline-flex;
-  align-items: center;
-  color: var(--text-secondary);
-  font-size: var(--fs-small);
-  font-weight: 600;
-  text-decoration: none;
-  background: var(--surface-raise);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-pill);
-  padding: 7px 14px;
-  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
-}
-.morning-brief-link:hover { background: var(--surface-hover); color: var(--clr-put); }
-
-/* ช่องเผื่ออนาคต: GEX Regime toggle (ยังไม่ implement — โปรเจกต์แยก) */
-.gex-slot {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--text-muted);
-  font-size: var(--fs-small);
-  opacity: 0.55;
-  cursor: not-allowed;
-  user-select: none;
-}
-.gex-slot .switch {
-  width: 30px; height: 17px;
-  border-radius: var(--radius-pill);
-  background: var(--surface-raise);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--riser);
   border: 1px solid var(--border);
-  position: relative;
+  border-radius: var(--radius-ctrl);
+  padding: 7px 30px 7px 12px;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 var(--lit);
+  /* ลูกศร dropdown วาดด้วย SVG inline — ไม่ต้องมีไฟล์ไอคอน */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236f7a8b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+  transition: background-color var(--dur-fast) var(--ease-out);
 }
-.gex-slot .switch::after {
-  content: "";
-  position: absolute;
-  top: 2px; left: 2px;
-  width: 11px; height: 11px;
+.series-picker:hover { background-color: var(--riser-hi); }
+
+.date-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: var(--riser);
+  border-radius: var(--radius-pill);
+  padding: 6px 13px;
+  box-shadow: inset 0 1px 0 var(--lit);
+  white-space: nowrap;
+}
+/* จุดเต้น = ข้อมูลชุดนี้คือชุดล่าสุดที่ระบบดึงมา */
+.date-chip .pulse {
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: var(--text-muted);
+  background: var(--clr-up);
+  box-shadow: 0 0 0 0 rgba(42, 167, 140, 0.55);
+  animation: pulse 2.6s var(--ease-out) infinite;
+}
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(42, 167, 140, 0.5); }
+  70%  { box-shadow: 0 0 0 7px rgba(42, 167, 140, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(42, 167, 140, 0); }
 }
 
 /* ============ tabs ============ */
 
-/* sticky: เลื่อนลงไปแค่ไหนก็สลับแท็บได้ทันที ไม่ต้องเลื่อนกลับขึ้นบน */
 .tabs {
   position: sticky;
-  top: 0;
-  z-index: 30;
+  top: var(--rail-h);
+  z-index: 25;
   display: flex;
-  gap: var(--space-1);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding: var(--space-2) 0 var(--space-3);
-  background: rgba(13, 15, 19, 0.88);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  gap: 4px;
+  padding: 7px;
+  margin: var(--space-4) 0 0;
+  border-radius: var(--radius-pill);
+  align-self: flex-start;
+  /* ร่องจม: ปุ่มที่ active จะดูเหมือนยกขึ้นมาจากร่องนี้ */
+  background: var(--void);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.7), inset 0 0 0 1px var(--hairline);
 }
 
 .tabs button {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  color: var(--text-secondary);
-  font: inherit;
+  font-family: var(--font-display);
+  font-size: 0.84rem;
   font-weight: 600;
-  font-size: 0.84rem;      /* 13.5px */
-  padding: 9px 16px;
-  border-radius: var(--radius-ctrl);
+  letter-spacing: 0.015em;
+  color: var(--text-label);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-pill);
+  padding: 9px 20px;
   cursor: pointer;
-  transition:
-    background var(--dur-fast) var(--ease-out),
-    color var(--dur-fast) var(--ease-out);
+  transition: color var(--dur-fast) var(--ease-out),
+              background-color var(--dur-fast) var(--ease-out);
 }
-.tabs button:hover { color: var(--text-primary); }
+.tabs button:hover { color: var(--text-secondary); }
 .tabs button.active {
-  background: var(--surface-hover);
   color: var(--text-primary);
+  background: linear-gradient(180deg, var(--riser-hi), var(--riser));
+  box-shadow: inset 0 1px 0 var(--lit-hard), 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
-/* panel = เนื้อหาของแต่ละแท็บ */
-.panel {
+/* ============ แผ่นวัสดุ: การ์ดและ tile ============ */
+
+.card {
+  background: linear-gradient(180deg, #171e2a, #121820);
+  border-radius: var(--radius-card);
+  box-shadow: var(--slab-depth);
+  padding: var(--space-5);
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-4);
 }
 
-/* ============ banner แจ้งเตือน (rollover) ============ */
-
-.banner {
-  display: none;
-  align-items: flex-start;
-  gap: var(--space-3);
-  background: var(--clr-warn-soft);
-  border: 1px solid rgba(250, 178, 25, 0.35);
-  border-radius: var(--radius-card);
-  padding: var(--space-3) var(--space-4);
-  font-size: var(--fs-small);
-  color: var(--text-primary);
-}
-.banner.show { display: flex; animation: slide-in var(--dur-slow) var(--ease-out) both; }
-.banner .icon { flex: none; font-size: 1rem; line-height: 1.4; }
-.banner strong { color: var(--clr-warn); }
-
-/* ============ hero (spot + expected range) ============ */
-
-.hero {
+.card-head {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 28px 44px;
-  padding: var(--space-1) 0;
+  gap: var(--space-3);
+}
+.card-head h2 {
+  font-size: 0.98rem;
+  letter-spacing: 0.005em;
 }
 
-.hero .spot-value {
+.hint {
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.legend { display: flex; gap: 14px; flex-wrap: wrap; }
+.legend .key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-small);
+  color: var(--text-secondary);
+}
+.legend .swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+/* มุมมอง 3 มิติใช้สเกลไล่สีแทนสองสีแยก — Call ↔ กลาง ↔ Put */
+.legend .swatch.scale {
+  width: 68px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+}
+
+/* segmented control: ร่องจม + ปุ่มที่เลือกยกขึ้น (ภาษาเดียวกับ tabs) */
+.seg {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border-radius: var(--radius-ctrl);
+  background: var(--void);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6), inset 0 0 0 1px var(--hairline);
+}
+.seg button {
+  font-family: var(--font-sans);
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: var(--text-label);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--dur-fast) var(--ease-out),
+              background-color var(--dur-fast) var(--ease-out);
+}
+.seg button:hover { color: var(--text-secondary); }
+.seg button.active {
+  color: var(--text-primary);
+  background: linear-gradient(180deg, var(--riser-hi), var(--riser));
+  box-shadow: inset 0 1px 0 var(--lit-hard), 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+/* ปุ่มสลับ 3 มิติ/2 มิติ: ตัวเลือกที่เลือกอยู่ใช้สี Call ให้เห็นว่าเป็น
+   สวิตช์ของ "ตัวชูโรง" ไม่ใช่ตัวกรองธรรมดา */
+.seg.view button.active {
+  color: #fff;
+  background: linear-gradient(180deg, #4a80ea, #2f62c8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* ============ hero: ราคาปิด + Expected Range ============ */
+
+.eyebrow {
+  font-family: var(--font-display);
+  font-size: var(--fs-kicker);
+  font-weight: 600;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.readout {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.85fr) minmax(280px, 1.15fr);
+  gap: var(--space-5);
+  align-items: center;
+  background: linear-gradient(180deg, #171e2a, #121820);
+  border-radius: var(--radius-card);
+  box-shadow: var(--slab-depth);
+  padding: var(--space-5) var(--space-6);
+  margin-top: var(--space-2);
+}
+
+.readout-price { display: flex; flex-direction: column; gap: 2px; }
+
+.spot-value {
+  font-family: var(--font-mono);
   font-size: var(--fs-hero);
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: -0.01em;
-}
-
-.hero .spot-chg {
-  font-size: 0.94rem;
-  font-weight: 600;
+  font-weight: 500;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
   margin-top: 6px;
 }
-.spot-chg.up   { color: var(--clr-up); }
+
+.spot-chg {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin-top: 4px;
+}
+.spot-chg.up { color: var(--clr-up); }
 .spot-chg.down { color: var(--clr-down); }
 
-.hero .label {
-  color: var(--text-muted);
-  font-size: 0.78rem;
-  margin-bottom: 6px;
-}
+/* เครื่องมือวัดช่วงราคา: รางจม แถบ σ ยกขึ้นมาในราง */
+.readout-range { display: flex; flex-direction: column; gap: 10px; }
 
-/* แถบ Expected Range: แสดง ±0.5σ (เข้ม) ซ้อนบน ±1σ (จาง) */
-.range-box { min-width: min(440px, 100%); flex: 1; }
 .range-track {
   position: relative;
-  height: 14px;
+  height: 30px;
   border-radius: var(--radius-pill);
-  background: var(--surface-raise);
+  background: var(--void);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.7), inset 0 0 0 1px var(--hairline);
   overflow: hidden;
 }
 .range-band {
   position: absolute;
-  top: 0; bottom: 0;
+  top: 4px;
+  bottom: 4px;
   border-radius: var(--radius-pill);
-  transform-origin: center;
   transform: scaleX(0);
-  transition: transform 700ms var(--ease-out);
+  transform-origin: center;
+  transition: transform var(--dur-slow) var(--ease-out) 120ms;
 }
-.range-band.sigma1  { background: rgba(61, 116, 224, 0.18); }
-.range-band.sigma05 { background: rgba(61, 116, 224, 0.45); }
+.range-band.sigma1 {
+  background: rgba(61, 116, 224, 0.17);
+  box-shadow: inset 0 0 0 1px rgba(61, 116, 224, 0.3);
+}
+.range-band.sigma05 {
+  background: rgba(61, 116, 224, 0.34);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+/* เข็มชี้ราคาปัจจุบัน — ชิ้นที่ยกสูงสุดในราง */
 .range-spot-tick {
   position: absolute;
-  top: -3px; bottom: -3px;
+  top: 0;
+  bottom: 0;
   width: 2px;
   background: var(--text-primary);
+  box-shadow: 0 0 10px rgba(241, 245, 250, 0.55);
 }
+
 .range-labels {
   display: flex;
   justify-content: space-between;
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-  margin-top: var(--space-2);
+  gap: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  color: var(--text-muted);
 }
-.range-labels .mid { color: var(--text-muted); }
+.range-labels .mid { color: var(--text-label); }
+
+/* ============ ตัวชูโรง: OI Terrain (เวที 3 มิติ) ============ */
+
+/* เวทีจมลงไปจากหน้าการ์ด — ของ 3 มิติจึงดูเหมือนวางอยู่ "ใน" การ์ด
+   ไม่ใช่ลอยอยู่บนนั้น */
+.stage {
+  position: relative;
+  height: clamp(390px, 50vh, 560px);
+  border-radius: 10px;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(61, 116, 224, 0.10), transparent 60%),
+    var(--void);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.75), inset 0 0 0 1px var(--hairline);
+}
+.stage-view { position: absolute; inset: 0; }
+.stage-view > div[id^="chart-"] { width: 100%; height: 100%; }
+
+/* ข้อความสถานะกลางเวที (กำลังโหลด / เปิด 3 มิติไม่ได้) */
+.stage-msg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-direction: column;
+  text-align: center;
+  padding: var(--space-5);
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--void) 88%, transparent);
+}
+.stage-msg .spin {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 2px solid var(--riser-hi);
+  border-top-color: var(--clr-call);
+  animation: spin 800ms linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.orbit-hint {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--void) 78%, transparent);
+  border-radius: var(--radius-pill);
+  padding: 4px 11px;
+  pointer-events: none;
+  transition: opacity var(--dur-med) var(--ease-out);
+}
+.orbit-hint.gone { opacity: 0; }
+
+/* แถบอ่านค่าสไตรค์ที่ชี้อยู่ — ผูกกราฟ 3 มิติ, กราฟ 2 มิติ และตารางเข้าด้วยกัน */
+.focus-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-5);
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--riser);
+  box-shadow: inset 0 1px 0 var(--lit), inset 0 0 0 1px var(--hairline);
+  /* ขอบซ้ายสว่างขึ้นเมื่อมีสไตรค์ถูกล็อกอยู่ */
+  border-left: 3px solid transparent;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.focus-bar.on { border-left-color: var(--clr-call); }
+
+.focus-strike { display: flex; align-items: baseline; gap: 9px; }
+.focus-strike .v {
+  font-family: var(--font-mono);
+  font-size: 1.45rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text-primary);
+}
+.focus-tag {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--clr-warn);
+  background: var(--clr-warn-soft);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.focus-figs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  margin: 0;
+}
+.focus-figs div { display: flex; flex-direction: column; gap: 1px; }
+.focus-figs dt {
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.focus-figs dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.focus-figs dd.call { color: var(--clr-call); }
+.focus-figs dd.put { color: var(--clr-put); }
+.focus-figs dd.up { color: var(--clr-up); }
+.focus-figs dd.down { color: var(--clr-down); }
+
+.focus-help {
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+  margin-left: auto;
+}
 
 /* ============ stat tiles ============ */
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
 }
 
 .tile {
-  background: var(--surface-card);
-  border: 1px solid var(--border);
+  position: relative;
+  background: linear-gradient(180deg, #171e2a, #121820);
   border-radius: var(--radius-card);
-  padding: 18px 20px 20px;
+  box-shadow: var(--slab-depth);
+  padding: var(--space-4) var(--space-5) var(--space-5);
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-  box-shadow: var(--shadow-card);
+  gap: 3px;
+  /* ยกขึ้นเล็กน้อยตอนชี้ — แผ่นวัสดุตอบสนอง ไม่ใช่ภาพนิ่ง */
+  transition: transform var(--dur-fast) var(--ease-out),
+              box-shadow var(--dur-fast) var(--ease-out);
+}
+@media (hover: hover) {
+  .tile:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--slab-depth-hi);
+  }
 }
 
 .tile .label {
-  color: var(--text-label);
+  font-family: var(--font-display);
   font-size: var(--fs-kicker);
   font-weight: 600;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
-}
-
-.tile .value {
-  font-size: var(--fs-stat);
-  font-weight: 600;
-  line-height: 1.15;
-  overflow-wrap: anywhere;
-}
-
-.tile .sub {
   color: var(--text-muted);
-  font-size: 0.75rem;
 }
-.tile .sub .accent { color: var(--text-secondary); font-weight: 600; }
+.tile .value {
+  font-family: var(--font-mono);
+  font-size: var(--fs-stat);
+  font-weight: 500;
+  line-height: 1.15;
+  margin-top: 4px;
+}
+.tile .sub {
+  font-size: var(--fs-small);
+  color: var(--text-label);
+}
 .tile .sub.warn { color: var(--clr-warn); }
 
-/* สถานะ "ข้อมูลสะสมยังไม่พอ" — ไม่ใช้ mono เพราะเป็นข้อความ ไม่ใช่ตัวเลข */
-.tile .not-enough {
-  color: var(--text-muted);
-  font-family: var(--font-sans);
-  font-size: 0.94rem;
-  font-weight: 500;
-}
-
-/* sparkline เล็กใน tile ATM IV */
-.tile .spark { margin-top: var(--space-1); }
-.tile .spark svg { display: block; width: 100%; height: 30px; }
-
-/* ============ cards / charts ============ */
-
-.card {
-  background: var(--surface-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  padding: 20px 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  box-shadow: var(--shadow-card);
-}
-
-.card-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 16px;
-}
-
-.card-head h2 {
-  font-size: 0.94rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-/* หัวข้อแบบ uppercase เล็ก (การ์ดกราฟ OI ตามดีไซน์) */
-.card-head h2.kicker {
-  font-size: var(--fs-kicker);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-label);
-}
-
-.card-head .hint {
-  color: var(--text-muted);
-  font-size: 0.75rem;
-  flex-basis: 100%;
-}
-
-/* hint ใต้กราฟ (นอก card-head เช่นของ OI change) — โตกว่า hint บนหัวการ์ด
-   เพราะเป็นคำอธิบายวิธีอ่านกราฟ ไม่ใช่เชิงอรรถ */
-.card > .hint {
-  color: var(--text-secondary);
-  font-size: 0.8rem;
-}
-
-.card-head .spacer { flex: 1; }
-
-/* legend เอง (นอก Chart.js) */
-.legend {
-  display: flex;
-  flex-wrap: wrap; /* จอแคบให้ key ตกบรรทัดแทนที่จะล้นขอบการ์ด */
-  gap: var(--space-2) var(--space-4);
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-.legend .key {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.legend .swatch {
-  width: 10px; height: 10px;
-  border-radius: 2px;
-  flex: none;
-}
-/* swatch แบบ "เส้น" สำหรับกราฟเส้น (IV Smile) — โชว์ลายเส้นประได้ด้วย */
-.legend .swatch.line {
-  width: 18px; height: 3px;
-  border-radius: 2px;
-}
-
-.chart-box { position: relative; width: 100%; }
-.chart-box > div { width: 100%; height: 100%; } /* container ของ ECharts */
-.chart-box.tall  { height: 420px; }
-.chart-box.iv    { height: 480px; }
-/* กราฟ OI change แนวนอน: สูงตามจำนวนสไตรค์ (JS ตั้ง height ตรงๆ)
-   จำกัดความกว้างและจัดกลางการ์ด — จอกว้างมากแท่งจะได้ไม่จมหายใน
-   พื้นที่ว่างสองข้าง · min-height กันกระตุกระหว่างรอข้อมูล */
-.chart-box.change {
-  min-height: 360px;
-  max-width: 920px;
-  margin-inline: auto;
-}
-@media (max-width: 560px) {
-  .chart-box.tall  { height: 300px; }
-  .chart-box.iv    { height: 320px; }
-}
-
-/* ============ top movers (สรุปคำตอบ "วันนี้เกิดอะไรขึ้น" เหนือกราฟ) ============ */
-
-.movers {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 12px;
-}
-
-.mover {
-  background: var(--surface-raise);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  padding: 16px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-/* กล่องเพิ่ม/ลด: แถบสีข้าง + พื้นจางสีเดียวกัน ให้เห็นเป็นไฮไลต์ ไม่ใช่เชิงอรรถ */
-.mover.build {
-  box-shadow: inset 3px 0 0 var(--clr-up), var(--shadow-card);
-  background: rgba(42, 167, 140, 0.08);
-}
-.mover.unwind {
-  box-shadow: inset 3px 0 0 var(--clr-down), var(--shadow-card);
-  background: rgba(224, 86, 74, 0.07);
-}
-
-.mover .label {
-  color: var(--text-label);
-  font-size: var(--fs-kicker);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-}
-.mover.build .label .arrow  { color: var(--clr-up); }
-.mover.unwind .label .arrow { color: var(--clr-down); }
-
-/* สไตรค์ = พระเอกของกล่อง */
-.mover .strike {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-size: 1.9rem;
-  font-weight: 600;
-  line-height: 1.1;
-  letter-spacing: -0.01em;
-}
-.mover .strike.up   { color: var(--clr-up); }
-.mover .strike.down { color: var(--clr-down); }
-
-.mover .delta {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-size: 1rem;
-  font-weight: 600;
-}
-.mover .delta.up   { color: var(--clr-up); }
-.mover .delta.down { color: var(--clr-down); }
-
-.mover .sub {
-  color: var(--text-muted);
-  font-size: 0.78rem;
-  overflow-wrap: anywhere;
-}
-
-/* คำอธิบายทิศทางเหนือกราฟ OI change — บอกเป็นคำพูด ไม่ต้องเดาจากสี
-   ความกว้างเท่ากราฟ (จัดกลางเหมือนกัน) ให้ลูกศรชี้ตรงฝั่งของแท่งจริงๆ */
-.dir-caption {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
-  font-size: 0.84rem;
-  font-weight: 600;
-  max-width: 920px;
-  width: 100%;
-  margin: 0 auto -4px;
-}
-.dir-caption .up   { color: var(--clr-up); }
-.dir-caption .down { color: var(--clr-down); }
-
-/* ============ empty state (แท็บ OI Change ตอน history ไม่พอ) ============ */
-
-.empty-card {
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 60px 32px;
-  gap: 10px;
-}
-.empty-card h2 {
-  font-size: 0.94rem;
-  font-weight: 600;
-  margin: 12px 0 0;
-}
-.empty-card .empty-icon {
-  width: 38px; height: 38px;
-  border-radius: 10px;
-  background: var(--surface-raise);
-  border: 1px solid var(--border-strong);
-}
-.empty-card .empty-text {
-  color: var(--text-muted);
-  font-size: 0.81rem;
-  max-width: 420px;
-}
-
-/* ============ segmented control (1D/5D/10D, Call/Put/รวม) ============ */
-
-.seg {
-  display: inline-flex;
-  background: var(--surface-raise);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-ctrl);
-  padding: 2px;
-  gap: 2px;
-}
-
-.seg button {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  color: var(--text-secondary);
-  font: inherit;
-  font-size: var(--fs-small);
-  padding: 4px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition:
-    background var(--dur-fast) var(--ease-out),
-    color var(--dur-fast) var(--ease-out);
-}
-.seg button:hover { color: var(--text-primary); }
-.seg button.active {
-  background: var(--surface-hover);
-  color: var(--text-primary);
-  font-weight: 600;
-}
+.spark { height: 30px; margin-top: 8px; }
+.spark svg { width: 100%; height: 100%; display: block; }
 
 /* ============ ตารางรายสไตรค์ ============ */
 
-.table-scroll { overflow-x: auto; }
+.table-scroll {
+  overflow-x: auto;
+  border-radius: 10px;
+  background: var(--void);
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.6), inset 0 0 0 1px var(--hairline);
+}
 
 table.strikes {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.81rem;      /* 13px ตามดีไซน์ */
+  font-size: var(--fs-small);
   white-space: nowrap;
 }
 
 table.strikes th {
-  text-align: right;
-  color: var(--text-muted);
-  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  font-family: var(--font-display);
   font-size: var(--fs-kicker);
+  font-weight: 600;
+  letter-spacing: 0.11em;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 10px 14px;
-  border-bottom: 1px solid #2c303a;
+  color: var(--text-muted);
+  text-align: right;
+  padding: 11px 14px;
+  background: #101620;
+  border-bottom: 1px solid var(--grid-line);
 }
-table.strikes th:first-child { text-align: left; }
+table.strikes th:first-child { text-align: left; left: 0; z-index: 3; }
 
 table.strikes td {
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
   text-align: right;
   padding: 9px 14px;
-  border-bottom: 1px solid #2c303a;
-  color: var(--text-secondary);
+  border-bottom: 1px solid var(--grid-line);
 }
-table.strikes td:first-child {
-  text-align: left;
-  color: var(--text-primary);
-  font-weight: 600;
-  padding-left: 14px;
-}
-table.strikes tr:last-child td { border-bottom: 0; }
+table.strikes tbody tr:last-child td { border-bottom: 0; }
 
-/* คอลัมน์ Strike ตรึงซ้าย: เลื่อนตารางในจอแคบแล้วยังรู้ว่าอ่านแถวไหนอยู่
-   (ต้องมีพื้นทึบ ไม่งั้นตัวเลขคอลัมน์อื่นลอดมาให้เห็นตอนเลื่อน) */
-table.strikes th:first-child,
+/* คอลัมน์สไตรค์ติดขอบซ้ายไว้เสมอ — เลื่อนตารางแนวนอนแล้วยังรู้ว่าแถวไหน */
 table.strikes td:first-child {
   position: sticky;
   left: 0;
   z-index: 1;
-  background: var(--surface-card);
+  text-align: left;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: #0a0e15;
 }
 
-/* แถว ATM / Max Pain: พื้นจาง + เส้น accent ซ้าย (ตั้งค่าจาก JS ผ่าน class) */
-table.strikes tr.atm td { background: rgba(61, 116, 224, 0.07); }
+table.strikes tbody tr { transition: background-color var(--dur-fast) var(--ease-out); }
+table.strikes tbody tr:hover { background: rgba(61, 116, 224, 0.07); }
+
+/* แถวที่ถูกล็อกจากกราฟหรือจากการชี้ — ตรงกับ .focus-bar ด้านบน */
+table.strikes tbody tr.focused { background: rgba(61, 116, 224, 0.15); }
+table.strikes tbody tr.focused td:first-child {
+  background: color-mix(in srgb, var(--clr-call) 22%, #0a0e15);
+  box-shadow: inset 3px 0 0 var(--clr-call);
+}
+
+/* ATM / Max Pain: เซลล์แรกต้องทึบ (เพราะ sticky ทับเนื้อหาที่เลื่อนผ่าน) */
+table.strikes tr.atm td { background: rgba(61, 116, 224, 0.09); }
 table.strikes tr.atm td:first-child {
-  box-shadow: inset 2px 0 0 var(--clr-call);
-  /* เซลล์ sticky ต้องทึบ — ผสมสี highlight ลงบนพื้นการ์ดแทน rgba โปร่ง */
-  background: color-mix(in srgb, var(--clr-call) 8%, var(--surface-card));
+  background: color-mix(in srgb, var(--clr-call) 14%, #0a0e15);
 }
-table.strikes tr.mp  td:first-child { box-shadow: inset 2px 0 0 var(--text-muted); }
+table.strikes tr.mp td:first-child { box-shadow: inset 3px 0 0 var(--clr-put); }
 
-/* ป้าย ATM / MAX PAIN ท้ายตัวเลขสไตรค์ */
 .tag {
-  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  color: var(--text-primary);
+  background: var(--riser-hi);
+  border-radius: 4px;
+  padding: 2px 6px;
   margin-left: 8px;
-  padding: 2px 7px;
-  border-radius: var(--radius-pill);
-  font-size: 0.56rem;      /* 9px */
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-secondary);
-  vertical-align: 2px;
-  font-family: var(--font-sans);
+  vertical-align: middle;
 }
 
-/* แถบ OI ในเซลล์ (ยาวตามสัดส่วนของ OI สูงสุดฝั่งนั้น) */
-td.oi-cell { position: relative; }
-td.oi-cell .oi-bar {
+/* เซลล์ OI: แถบสีความยาวตามสัดส่วน อ่านแนวโน้มได้โดยไม่ต้องอ่านตัวเลข */
+.oi-cell { position: relative; }
+.oi-cell .oi-bar {
   position: absolute;
-  top: 2px; bottom: 2px; right: 0;
-  border-radius: 3px 0 0 3px;
+  right: 0;
+  top: 4px;
+  bottom: 4px;
+  border-radius: 3px;
   pointer-events: none;
 }
-td.oi-cell .oi-bar.call { background: var(--clr-call-soft); }
-td.oi-cell .oi-bar.put  { background: var(--clr-put-soft); }
-td.oi-cell span { position: relative; }
+.oi-cell .oi-bar.call { background: var(--clr-call-soft); }
+.oi-cell .oi-bar.put { background: var(--clr-put-soft); }
+.oi-cell span { position: relative; }
 
-td .chg-up   { color: var(--clr-up); }
-td .chg-down { color: var(--clr-down); }
+.chg-up { color: var(--clr-up); }
+.chg-down { color: var(--clr-down); }
+.volhot.call { color: var(--clr-call); font-weight: 600; }
+.volhot.put { color: var(--clr-put); font-weight: 600; }
 
-/* Vol/OI > 1 : สีตามฝั่ง + ▲ กำกับ (ไม่พึ่งสีอย่างเดียว) */
-td .volhot.call { color: var(--clr-call); }
-td .volhot.put  { color: var(--clr-put); }
-
-/* badge ⚡ ผิดปกติ (คอลัมน์ ΔOI) */
-.badge {
-  display: inline-block;
-  padding: 1px 7px;
-  border-radius: var(--radius-pill);
-  font-size: 0.66rem;
-  font-weight: 600;
+.badge.unusual {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  color: var(--clr-warn);
+  background: var(--clr-warn-soft);
+  border-radius: 4px;
+  padding: 1px 5px;
   margin-left: 6px;
-  vertical-align: 1px;
-  font-family: var(--font-sans);
-}
-.badge.unusual { background: var(--clr-warn-soft); color: var(--clr-warn); }
-
-/* ============ footer ============ */
-
-.foot {
-  color: var(--text-muted);
-  font-size: 0.75rem;
-  text-align: center;
-  padding: var(--space-3) 0 0;
 }
 
-/* ============ error state ============ */
+/* ============ แท็บ OI Change ============ */
 
+.chart-box { position: relative; }
+.chart-box > div[id^="chart-"] { width: 100%; height: 100%; }
+.chart-box.iv { height: clamp(380px, 50vh, 520px); }
+/* กราฟ tornado: ความสูงตั้งจาก JS ตามจำนวนสไตรค์ · กว้างพอดีตรงกลาง
+   ไม่ยืดเต็มการ์ด (แท่งยาวเกินไปจะเทียบสายตายาก) */
+.chart-box.change { max-width: 920px; margin-inline: auto; width: 100%; }
+
+.fade-swap { transition: opacity var(--dur-fast) var(--ease-out); }
+.fade-swap.swapping { opacity: 0.25; }
+
+.movers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+}
+.mover {
+  border-radius: 10px;
+  padding: 13px 16px;
+  background: var(--riser);
+  box-shadow: inset 0 1px 0 var(--lit), inset 0 0 0 1px var(--hairline);
+  border-left: 3px solid transparent;
+}
+.mover.build { border-left-color: var(--clr-up); background: color-mix(in srgb, var(--clr-up) 8%, var(--riser)); }
+.mover.unwind { border-left-color: var(--clr-down); background: color-mix(in srgb, var(--clr-down) 8%, var(--riser)); }
+.mover.net { border-left-color: var(--text-muted); }
+
+.mover .label {
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  color: var(--text-label);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.mover.build .arrow { color: var(--clr-up); }
+.mover.unwind .arrow { color: var(--clr-down); }
+
+.mover .strike {
+  font-family: var(--font-mono);
+  font-size: 1.9rem;
+  font-weight: 600;
+  line-height: 1.12;
+  color: var(--text-primary);
+}
+.mover .strike.up { color: var(--clr-up); }
+.mover .strike.down { color: var(--clr-down); }
+
+.mover .delta {
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  font-weight: 500;
+}
+.mover .delta.up { color: var(--clr-up); }
+.mover .delta.down { color: var(--clr-down); }
+.mover .sub { font-size: var(--fs-small); color: var(--text-muted); }
+
+.dir-caption {
+  display: flex;
+  justify-content: space-between;
+  max-width: 920px;
+  margin-inline: auto;
+  width: 100%;
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+.dir-caption .up { color: var(--clr-up); }
+.dir-caption .down { color: var(--clr-down); }
+
+.empty-card { align-items: center; text-align: center; padding: 56px var(--space-5); }
+.empty-card .empty-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: var(--riser);
+  box-shadow: inset 0 1px 0 var(--lit), inset 0 0 0 1px var(--hairline);
+  margin-bottom: 4px;
+}
+.empty-card .empty-text { max-width: 46ch; color: var(--text-muted); font-size: var(--fs-small); }
+
+/* ============ แจ้งเตือน ============ */
+
+.banner,
 .load-error {
   display: none;
-  background: var(--surface-card);
-  border: 1px solid rgba(216, 86, 76, 0.4);
-  border-radius: var(--radius-card);
-  padding: var(--space-5);
-  color: var(--text-secondary);
+  border-radius: 10px;
+  padding: 13px 16px;
+  font-size: var(--fs-small);
+  line-height: 1.6;
 }
+.banner.show { display: flex; gap: 11px; align-items: flex-start; }
 .load-error.show { display: block; }
-.load-error code {
-  background: var(--surface-raise);
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-family: var(--font-mono);
+
+.banner {
+  color: var(--text-primary);
+  background: var(--clr-warn-soft);
+  box-shadow: inset 0 0 0 1px rgba(250, 178, 25, 0.28);
+}
+.banner .icon { color: var(--clr-warn); }
+.banner strong { color: var(--clr-warn); font-weight: 600; }
+
+.load-error {
+  color: var(--text-primary);
+  background: rgba(224, 86, 74, 0.11);
+  box-shadow: inset 0 0 0 1px rgba(224, 86, 74, 0.3);
 }
 
-/* ============ responsive: มือถือ ============ */
-
-@media (max-width: 640px) {
-  .card { padding: 16px 14px; }
-  .tile { padding: 14px 14px 16px; }
-
-  /* tile 2 คอลัมน์เสมอ: กว้างพอสำหรับตัวเลข ไม่ยาวจนต้องเลื่อนมาก */
-  .stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  /* header เรียงลง: ชื่อ → วันที่ → dropdown เต็มแถว กดง่าย */
-  .topbar { gap: 10px; }
-  select.series-picker { flex: 1 1 100%; width: 100%; }
-
-  .hero { gap: 20px; }
-  .movers { gap: 8px; }
-
-  /* แท็บกินเต็มแถว แบ่งกันเท่าๆ — โซนกดใหญ่ขึ้น */
-  .tabs button { flex: 1; text-align: center; }
+.foot {
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+  text-align: center;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
 }
 
-/* ============ animations ตอนโหลดหน้า ============ */
+/* ============ การเผยตัวตอนโหลด ============
+   การ์ดทยอยยกขึ้นเข้าที่ทีละใบ — จังหวะเดียวกับที่การ์ดตอบสนองตอน hover */
 
-@keyframes slide-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* การ์ดทยอยโผล่ทีละใบ (stagger ผ่าน --i ที่ตั้งจาก HTML) */
 .reveal {
   opacity: 0;
-  animation: slide-in var(--dur-slow) var(--ease-out) both;
+  transform: translateY(14px);
+  animation: rise var(--dur-slow) var(--ease-out) forwards;
   animation-delay: calc(var(--i, 0) * var(--stagger));
 }
+@keyframes rise {
+  to { opacity: 1; transform: none; }
+}
 
-/* สลับ view ของกราฟ OI change แบบนุ่มนวล */
-.fade-swap { transition: opacity var(--dur-med) var(--ease-out); }
-.fade-swap.swapping { opacity: 0.35; }
+/* ============ จอเล็ก ============ */
 
-/* ============ reduced motion: ปิด animation ทั้งหมด ============ */
+@media (max-width: 1000px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .readout { grid-template-columns: 1fr; }
+  .movers { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+  .deck { padding: 0 16px 56px; }
+  .rail { margin: 0 -16px; padding: 0 16px; }
+  .brand-name small { display: none; }
+  .readout { padding: var(--space-5) var(--space-4); }
+  .card { padding: var(--space-4); }
+  .tabs { align-self: stretch; }
+  .tabs button { flex: 1; padding: 9px 12px; text-align: center; }
+  .stage { height: clamp(320px, 50vh, 430px); }
+  .focus-help { display: none; }
+  .focus-figs { gap: var(--space-4); }
+}
+
+/* แถบบนแคบเกินกว่าจะใส่ทั้งชื่อ, ตัวเลือกซีรีส์ และวันที่ —
+   ตัดชื่อออก เหลือโลโก้ (ชื่อหน้าอยู่บนแท็บเบราว์เซอร์อยู่แล้ว) */
+@media (max-width: 560px) {
+  .brand-name { display: none; }
+  .date-chip { font-size: 0.7rem; padding: 6px 10px; }
+}
+
+@media (max-width: 460px) {
+  .stats { grid-template-columns: 1fr; }
+  .card-head { gap: var(--space-2); }
+}
+
+/* จอสัมผัส: ปุ่มทุกตัวโตพอสำหรับนิ้ว */
+@media (pointer: coarse) {
+  .seg button { padding: 9px 14px; }
+  .tabs button { padding: 12px 18px; }
+  .series-picker { padding: 11px 30px 11px 14px; }
+}
+
+/* ============ เคารพการตั้งค่าลดการเคลื่อนไหว ============ */
 
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
-    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+  .reveal { opacity: 1; transform: none; }
+  .range-band { transform: scaleX(1); }
 }

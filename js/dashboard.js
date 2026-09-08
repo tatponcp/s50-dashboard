@@ -3,8 +3,14 @@
    ------------------------------------------------------------
    การคำนวณตัวชี้วัดทั้งหมดอยู่ใน metrics.js (โหลดก่อนไฟล์นี้)
    ไฟล์นี้ทำหน้าที่: จัดการ state, วาดกราฟ ECharts, animation
-   สเปกกราฟ (สี/grid/tooltip/จังหวะ animation) ยกมาจากไฟล์ดีไซน์
-   "S50 Options Dashboard.dc.html" ใน Claude Design ตรงๆ
+
+   สามส่วนที่ควรรู้ก่อนแก้:
+   1) OI Terrain (มุมมอง 3 มิติ) — สร้างด้วย echarts-gl ที่โหลดแบบ lazy
+      ความสูงของแท่ง = OI รวมของสไตรค์นั้นในวันนั้น
+      สีของแท่ง     = ฝั่งไหนถือครองมากกว่า (น้ำเงิน Call ↔ ทอง Put)
+   2) focus bus — สไตรค์ที่ "กำลังดู" มีตัวเดียวทั้งหน้า ชี้ที่กราฟไหน
+      หรือแถวไหนในตารางก็ได้ ทุกที่จะไฮไลต์ตรงกัน (setFocus)
+   3) ธีมสี/ฟอนต์อ่านจาก CSS tokens ใน styles.css — แก้ที่นั่นที่เดียว
    ============================================================ */
 'use strict';
 
@@ -15,6 +21,13 @@
   /* ฟีเจอร์ที่พักไว้พัฒนาต่อ — เปิด ivSmile คู่กับลบ hidden
      ของปุ่มแท็บใน index.html */
   const FEATURES = { ivSmile: false };
+
+  /* echarts-gl: ไฟล์ใหญ่ ~1.5MB โหลดตอนต้องใช้จริงเท่านั้น */
+  const ECHARTS_GL_SRC = 'https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js';
+
+  /* มุมมอง 3 มิติต้องมีอย่างน้อยกี่วันถึงจะมีความหมาย
+     (1-2 วันไม่เรียกว่า "ภูมิประเทศ" — ใช้ 2 มิติอ่านง่ายกว่า) */
+  const MIN_SESSIONS_3D = 3;
 
   /* อ่านค่าสีจาก CSS tokens — แก้ธีมใน styles.css แล้วกราฟเปลี่ยนตาม */
   const css = getComputedStyle(document.documentElement);
@@ -28,11 +41,14 @@
     down: token('--clr-down'),
     grid: token('--grid-line'),
     textMuted: token('--text-muted'),
+    textLabel: token('--text-label'),
     textSecondary: token('--text-secondary'),
     textPrimary: token('--text-primary'),
     surfaceRaise: token('--surface-raise'),
     border: token('--border'),
   };
+  /* สีกลางของสเกลไล่สี Call↔Put — เทาอมน้ำเงิน ไม่เอนไปข้างไหน */
+  const NEUTRAL = '#7b8494';
 
   const REDUCED_MOTION =
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -43,12 +59,21 @@
     hist: [],          // history เรียงเก่า→ใหม่ (ไม่รวมวันนี้)
     seriesName: null,
     tab: 'overview',   // overview | change | iv
+    view: '3d',        // มุมมองกราฟ OI: 3d | 2d
+    depth: 10,         // จำนวนวันย้อนหลังในมุมมอง 3 มิติ
     chgWindow: 1,      // 1 / 5 / 10 วันทำการ
     chgSide: 'both',   // both | call | put
     oiChart: null,
+    oi3dChart: null,
     chgChart: null,
     ivChart: null,
-    unusualBySide: { call: {}, put: {} }, // strike -> ผล unusualOiChange (1D)
+    glState: 'idle',   // idle | loading | ready | failed
+    focus: null,       // สไตรค์ที่กำลังดู (number)
+    strikes: [],       // สไตรค์ของซีรีส์ปัจจุบัน เรียงน้อย→มาก
+    chg1: {},          // ΔOI 1 วัน ของซีรีส์ปัจจุบัน
+    atm: null,
+    maxPain: null,
+    unusualBySide: { call: {}, put: {} },
   };
 
   /* ---------- number formatting ---------- */
@@ -56,6 +81,10 @@
   const fmtSigned = (v) => v === null ? '–' :
     (v > 0 ? '+' : '') + Math.round(v).toLocaleString('en-US');
   const fmt = (v, d = 1) => v === null ? '–' : v.toFixed(d);
+  /* 12,400 → 12.4K (แกนกราฟและป้ายที่พื้นที่จำกัด) */
+  const fmtK = (v) => Math.abs(v) >= 1000
+    ? (v / 1000).toFixed(Math.abs(v) < 10000 ? 1 : 0) + 'K'
+    : String(Math.round(v));
 
   /* ============================================================
      ตัวเลขนับขึ้นตอนโหลด — จุดเดียวที่ใช้ GSAP เพราะ CSS ทำไม่ได้
@@ -82,10 +111,10 @@
   }
 
   /* ============================================================
-     ค่าตั้งต้นร่วมของ ECharts ให้เข้ากับธีม (ตามไฟล์ดีไซน์)
+     ค่าตั้งต้นร่วมของ ECharts ให้เข้ากับธีม
      ============================================================ */
-  const CHART_FONT = token('--font-sans') || 'IBM Plex Sans, sans-serif';
-  const MONO_FONT = token('--font-mono') || 'IBM Plex Mono, monospace';
+  const CHART_FONT = token('--font-sans') || 'Anuphan, sans-serif';
+  const MONO_FONT = token('--font-mono') || 'Spline Sans Mono, monospace';
 
   function baseOption() {
     return {
@@ -125,10 +154,14 @@
   }
 
   /* ปรับขนาดกราฟตามหน้าต่าง (เฉพาะตัวที่สร้างแล้ว) */
+  let resizeTimer = null;
   window.addEventListener('resize', () => {
-    for (const c of [state.oiChart, state.chgChart, state.ivChart]) {
-      if (c) c.resize();
-    }
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      for (const c of [state.oiChart, state.oi3dChart, state.chgChart, state.ivChart]) {
+        if (c) c.resize();
+      }
+    }, 120);
   });
 
   /* ============================================================
@@ -176,10 +209,11 @@
     picker.style.display = names.length > 1 ? '' : 'none';
     picker.addEventListener('change', () => {
       state.seriesName = picker.value;
+      state.focus = null;   // สไตรค์คนละชุด — เริ่มโฟกัสใหม่ที่ ATM
       renderAll();
     });
 
-    /* segmented controls ของกราฟ OI change */
+    /* segmented controls */
     bindSeg('seg-window', 'data-window', (v) => {
       state.chgWindow = Number(v);
       swapChgChart();
@@ -188,13 +222,25 @@
       state.chgSide = v;
       swapChgChart();
     });
+    bindSeg('seg-depth', 'data-depth', (v) => {
+      state.depth = Number(v);
+      if (state.view === '3d') renderTerrain();
+    });
+    bindSeg('seg-view', 'data-view', (v) => setView(v));
 
     bindTabs();
+    bindFocusKeys();
+
+    /* ถ้า history ยังน้อยเกินไป มุมมอง 3 มิติไม่มีอะไรให้ดู — เริ่มที่ 2 มิติ */
+    if (sessionsFor(state.depth).length < MIN_SESSIONS_3D) state.view = '2d';
+    syncSeg('seg-view', 'data-view', state.view);
+
     renderAll();
+    setView(state.view);
   }
 
   /* ============================================================
-     Tabs: Overview / OI Change / IV Smile
+     Tabs
      ------------------------------------------------------------
      กราฟใน panel ที่ hidden มีขนาด 0 — จึงสร้างกราฟของแท็บนั้น
      "ครั้งแรกที่เปิด" แทนการสร้างทั้งหมดตอนโหลด (lazy init)
@@ -220,6 +266,10 @@
 
     /* สร้าง/ปรับขนาดกราฟหลัง panel แสดงผลแล้ว (ให้ layout คำนวณขนาดก่อน) */
     requestAnimationFrame(() => {
+      if (name === 'overview') {
+        if (state.oiChart) state.oiChart.resize();
+        if (state.oi3dChart) state.oi3dChart.resize();
+      }
       if (name === 'change' && !$('chg-card').hidden) {
         if (state.chgChart) state.chgChart.resize();
         else updateChgChart();
@@ -233,12 +283,22 @@
 
   function bindSeg(id, attr, onChange) {
     const seg = $(id);
+    if (!seg) return;
     seg.addEventListener('click', (e) => {
       const btn = e.target.closest('button');
       if (!btn || btn.classList.contains('active')) return;
       seg.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
       onChange(btn.getAttribute(attr));
+    });
+  }
+
+  /* ตั้งปุ่มที่ active ให้ตรงกับ state (ใช้เมื่อโค้ดเป็นคนเปลี่ยนค่า ไม่ใช่ผู้ใช้) */
+  function syncSeg(id, attr, value) {
+    const seg = $(id);
+    if (!seg) return;
+    seg.querySelectorAll('button').forEach((b) => {
+      b.classList.toggle('active', b.getAttribute(attr) === String(value));
     });
   }
 
@@ -302,6 +362,11 @@
       }
     }
 
+    state.strikes = M.strikesOf(sd);
+    state.chg1 = chg1;
+    state.atm = M.atmStrike(sd, spot);
+    state.maxPain = maxPain;
+
     /* ---- header / banner ---- */
     $('data-date').textContent = `ข้อมูล ณ ${d.date}`;
     renderRolloverBanner(dte);
@@ -311,7 +376,7 @@
     const chgEl = $('spot-chg');
     const sc = M.num(d.spotChg);
     if (sc !== null) {
-      chgEl.textContent = `${sc >= 0 ? '▲' : '▼'} ${Math.abs(sc).toFixed(1)}`;
+      chgEl.textContent = `${sc >= 0 ? '▲' : '▼'} ${Math.abs(sc).toFixed(1)} จุดจากวันก่อน`;
       chgEl.className = 'spot-chg ' + (sc >= 0 ? 'up' : 'down');
     } else { chgEl.textContent = ''; }
     renderExpectedRange(range, spot, dte);
@@ -337,8 +402,15 @@
        กราฟของแท็บ OI Change / IV Smile สร้างครั้งแรกตอนเปิดแท็บ
        (ดู activateTab) — ที่นี่อัปเดตเฉพาะตัวที่สร้างแล้ว */
     renderOiChart(sd, spot, maxPain);
+    if (state.view === '3d' && state.glState === 'ready') renderTerrain();
     renderChangeTab();
     renderTable(sd, chg1, spot, maxPain);
+
+    /* โฟกัสเริ่มต้นที่ ATM — แถบอ่านค่าไม่เคยว่างตั้งแต่เปิดหน้า
+       ตารางเพิ่งถูกสร้างใหม่ ต้องบังคับทาไฮไลต์ซ้ำแม้สไตรค์เดิม */
+    const want = state.strikes.includes(state.focus) ? state.focus : state.atm;
+    state.focus = null;
+    setFocus(want);
   }
 
   /* ============================================================
@@ -472,7 +544,455 @@
   }
 
   /* ============================================================
-     กราฟหลัก: OI รายสไตรค์ + เส้น Spot + เส้น Max Pain
+     สลับมุมมองกราฟ OI: 3 มิติ ↔ 2 มิติ
+     ============================================================ */
+  function setView(view) {
+    state.view = view;
+    $('view-3d').hidden = view !== '3d';
+    $('view-2d').hidden = view !== '2d';
+    $('seg-depth').hidden = view !== '3d';
+    renderOiLegend();
+    updateOiHint();
+
+    if (view === '2d') {
+      requestAnimationFrame(() => { if (state.oiChart) state.oiChart.resize(); });
+      return;
+    }
+    ensureGl().then(renderTerrain).catch(() => showTerrainFallback());
+  }
+
+  /* เวทีเปลี่ยนขนาดเมื่อไหร่ (หน้าต่างย่อ/ขยาย, เปิดแท็บ, layout เสร็จทีหลัง)
+     ให้ปรับขนาดกราฟ — และถ้ายังไม่เคยวาด Terrain ได้เพราะตอนนั้นกว้าง 0
+     ก็ถือโอกาสวาดตอนนี้ */
+  if (typeof ResizeObserver !== 'undefined') {
+    let stageTimer = null;
+    new ResizeObserver((entries) => {
+      if (!entries.some((e) => e.contentRect.width > 0)) return;
+      clearTimeout(stageTimer);
+      stageTimer = setTimeout(() => {
+        if (state.oiChart) state.oiChart.resize();
+        if (state.view === '3d' && state.glState === 'ready') {
+          /* ข้ามช่วงความกว้าง (เช่น หมุนจอ) = ต้องจัดกล่อง/กล้องใหม่
+             ไม่ใช่แค่ยืดผืนผ้าใบ */
+          const bucketChanged =
+            state.oi3dChart && widthBucket($('chart-oi3d').clientWidth) !== state.boxBucket;
+          if (state.oi3dChart && !bucketChanged) state.oi3dChart.resize();
+          else renderTerrain();
+        }
+      }, 80);
+    }).observe($('oi-stage'));
+  }
+
+  /* โหลด echarts-gl ครั้งแรกที่ต้องใช้ (คืน Promise เดิมถ้าโหลดไปแล้ว) */
+  let glPromise = null;
+  function ensureGl() {
+    if (state.glState === 'ready') return Promise.resolve();
+    if (glPromise) return glPromise;
+
+    /* ไม่มี WebGL = วาด 3 มิติไม่ได้เลย ไม่ต้องเสียเวลาโหลดไฟล์ */
+    if (!hasWebGl()) {
+      state.glState = 'failed';
+      return Promise.reject(new Error('no-webgl'));
+    }
+
+    $('terrain-loading').hidden = false;
+    state.glState = 'loading';
+    glPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = ECHARTS_GL_SRC;
+      s.onload = () => { state.glState = 'ready'; $('terrain-loading').hidden = true; resolve(); };
+      s.onerror = () => { state.glState = 'failed'; $('terrain-loading').hidden = true; reject(new Error('gl-load-failed')); };
+      document.head.appendChild(s);
+    });
+    return glPromise;
+  }
+
+  function hasWebGl() {
+    try {
+      const c = document.createElement('canvas');
+      return !!(window.WebGLRenderingContext &&
+        (c.getContext('webgl') || c.getContext('experimental-webgl')));
+    } catch (e) { return false; }
+  }
+
+  /* เปิด 3 มิติไม่ได้ → บอกเหตุผลตรงๆ แล้วพากลับไป 2 มิติ */
+  function showTerrainFallback(reason) {
+    const box = $('terrain-fallback');
+    box.textContent = reason || (state.glState === 'failed' && !hasWebGl()
+      ? 'เบราว์เซอร์นี้เปิด WebGL ไม่ได้ จึงแสดงมุมมอง 3 มิติไม่ได้ — กำลังสลับไปมุมมอง 2 มิติ'
+      : 'โหลดมุมมอง 3 มิติไม่สำเร็จ — กำลังสลับไปมุมมอง 2 มิติ');
+    box.hidden = false;
+    setTimeout(() => {
+      box.hidden = true;
+      syncSeg('seg-view', 'data-view', '2d');
+      setView('2d');
+    }, 1600);
+  }
+
+  /* ============================================================
+     ตัวชูโรง: OI Terrain (3 มิติ)
+     ------------------------------------------------------------
+     แกน X = สไตรค์ · แกน Y = วันทำการ (เก่า→ใหม่) · แกน Z = OI รวม
+     สีของแท่ง = ดุลระหว่างสองฝั่ง: -1 ทั้งหมดเป็น Call (น้ำเงิน)
+                 → 0 พอกัน (เทา) → +1 ทั้งหมดเป็น Put (ทอง)
+
+     ทำไมใช้แท่งเดียวต่อช่อง ไม่ใช่ Call/Put สองชุดซ้อนกัน:
+     แท่ง 3 มิติสองชุดที่พิกัดเดียวกันจะบังกันเอง อ่านไม่ออก
+     การรวมความสูงแล้วให้สีบอกฝั่ง ตอบคำถามจริงของคนดูได้ครบกว่า —
+     "กำแพง OI อยู่สไตรค์ไหน ก่อตัวมากี่วันแล้ว และเป็นของฝั่งไหน"
+     ============================================================ */
+
+  /* ขนาดกล่อง 3 มิติ + ระยะกล้อง ตามความกว้างจริงของเวที — ค่าชุดเดียว
+     ใช้ไม่ได้ทั้งจอคอมและมือถือ (จอแคบต้องถอยกล้องออก ไม่งั้นกำแพงล้นขอบ
+     เวทีจนอ่านแกนไม่ออก) */
+  const BOX = {
+    narrow: { w: 150, d: 62, h: 58, dist: 330 },
+    mid:    { w: 180, d: 74, h: 66, dist: 240 },
+    wide:   { w: 200, d: 82, h: 72, dist: 196 },
+  };
+  const widthBucket = (w) => (w < 560 ? 'narrow' : w < 900 ? 'mid' : 'wide');
+
+  /* วันทำการที่จะเอามาวางบนแกนลึก: history n วันหลังสุด + วันนี้ */
+  function sessionsFor(depth) {
+    const d = state.data;
+    const past = state.hist.slice(-Math.max(0, depth - 1));
+    return [...past, { date: d.date, series: d.series }];
+  }
+
+  function renderTerrain() {
+    if (state.glState !== 'ready') return;
+    const el = $('chart-oi3d');
+    /* เวทีอาจกว้าง 0 อยู่ตอนนี้ (แท็บยังซ่อน / หน้าต่างยังไม่จัด layout เสร็จ)
+       — ปล่อยไว้ก่อน ResizeObserver ด้านล่างจะเรียกซ้ำให้เองเมื่อมีขนาดจริง */
+    if (!el.clientWidth) return;
+
+    const sessions = sessionsFor(state.depth);
+    if (sessions.length < MIN_SESSIONS_3D) {
+      showTerrainFallback(
+        `ยังมีข้อมูลย้อนหลังแค่ ${sessions.length} วัน — มุมมอง 3 มิติต้องมีอย่างน้อย ${MIN_SESSIONS_3D} วัน`);
+      return;
+    }
+
+    const strikes = state.strikes;
+    /* MM-DD พอสำหรับแกนลึก (ปีซ้ำกันหมด เปลืองที่เปล่าๆ) */
+    const dates = sessions.map((s) => String(s.date).slice(5));
+
+    const data = [];
+    const cell = {};           // "xi,yi" → { call, put } ให้ tooltip ใช้ต่อ
+    let maxTotal = 0;
+    sessions.forEach((snap, yi) => {
+      const sd = (snap.series || {})[state.seriesName];
+      if (!sd) return;
+      strikes.forEach((k, xi) => {
+        const row = sd[String(k)];
+        if (!row) return;
+        const c = M.numOr0(row.callOI);
+        const p = M.numOr0(row.putOI);
+        const total = c + p;
+        if (total <= 0) return;
+        /* ดุลฝั่ง: -1 = Call ล้วน, +1 = Put ล้วน */
+        const balance = (p - c) / total;
+        data.push([xi, yi, total, balance]);
+        cell[xi + ',' + yi] = { call: c, put: p };
+        if (total > maxTotal) maxTotal = total;
+      });
+    });
+
+    if (!data.length) {
+      showTerrainFallback('ไม่มีข้อมูล OI ในช่วงวันที่เลือก');
+      return;
+    }
+
+    /* เครื่องหมาย Spot กับ Max Pain: เส้นลากตลอดแนวลึกบนพื้นเวที
+       + ป้ายลอยเหนือยอดกำแพง (เส้นบนพื้นมักถูกแท่งบัง ป้ายจึงเป็นตัวหลัก
+       ที่บอกว่าราคาอยู่ตรงไหนเทียบกับกำแพง OI) */
+    const spot = M.num(state.data.spot);
+    const box = BOX[widthBucket(el.clientWidth)];
+    state.boxBucket = widthBucket(el.clientWidth);
+
+    const ceil = maxTotal * 1.06;
+    const marks = [];
+    const addMark = (price, color, text, lift) => {
+      const xPos = fractionalIndex(strikes, price);
+      if (xPos === null) return;
+      marks.push({
+        type: 'line3D',
+        silent: true,
+        data: dates.map((_, yi) => [xPos, yi, 0]),
+        lineStyle: { color, width: 3, opacity: 0.85 },
+      });
+      marks.push({
+        type: 'scatter3D',
+        silent: true,
+        symbolSize: 7,
+        /* วางกลางแกนลึก ไม่ใช่ขอบหลัง — ป้ายที่มุมหลังขวาจะล้นขอบเวทีบนจอแคบ */
+        data: [[xPos, (dates.length - 1) / 2, ceil * lift]],
+        itemStyle: { color, opacity: 0.95 },
+        label: {
+          show: true,
+          formatter: text,
+          color: COLOR.textPrimary,
+          fontSize: 12,
+          fontFamily: MONO_FONT,
+          backgroundColor: COLOR.surfaceRaise,
+          borderColor: color,
+          borderWidth: 1,
+          padding: [4, 7],
+          borderRadius: 5,
+        },
+      });
+    };
+    /* Spot กับ Max Pain มักอยู่สไตรค์ใกล้กัน — วางป้ายคนละระดับไม่ให้ทับ
+       จอแคบตัดตัวเลขออก (ป้ายยาวจะล้นขอบเวที) ตัวเลขเต็มอยู่ในการ์ดด้านล่างแล้ว */
+    const shortLabel = box === BOX.narrow;
+    addMark(spot, COLOR.textPrimary,
+      shortLabel ? 'Spot' : `Spot ${fmt(spot)}`, 1.17);
+    addMark(state.maxPain, COLOR.put,
+      shortLabel ? 'Max Pain' : `Max Pain ${fmtInt(state.maxPain)}`, 1.0);
+
+    /* ขนาดกล่อง 3 มิติและระยะกล้องตามความกว้างจริงของเวที —
+       ค่าชุดเดียวใช้ไม่ได้ทั้งจอคอมและมือถือ (จอแคบต้องถอยกล้องออก
+       ไม่งั้นกำแพงล้นขอบเวทีจนอ่านแกนไม่ออก) */
+    const axisCommon = {
+      nameTextStyle: { color: COLOR.textMuted, fontSize: 12, fontFamily: CHART_FONT },
+      axisLine: { lineStyle: { color: COLOR.border } },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: COLOR.grid, opacity: 0.55 } },
+    };
+
+    if (!state.oi3dChart) {
+      state.oi3dChart = echarts.init(el);
+      /* ชี้ที่แท่งไหน = ล็อกสไตรค์นั้นทั้งหน้า (กราฟ 2 มิติ + ตาราง) */
+      state.oi3dChart.on('mouseover', (p) => {
+        if (Array.isArray(p.value)) setFocus(strikes[p.value[0]]);
+      });
+      /* หมุนดูครั้งแรกแล้ว คำใบ้ก็หมดหน้าที่ */
+      el.addEventListener('pointerdown', hideOrbitHint, { once: true });
+      el.addEventListener('wheel', hideOrbitHint, { once: true, passive: true });
+    }
+
+    state.oi3dChart.setOption({
+      backgroundColor: 'transparent',
+      animation: !REDUCED_MOTION,
+      textStyle: { fontFamily: CHART_FONT, color: COLOR.textMuted, fontSize: 12 },
+      tooltip: {
+        backgroundColor: COLOR.surfaceRaise,
+        borderColor: COLOR.border,
+        textStyle: { color: COLOR.textSecondary, fontSize: 12.5 },
+        formatter: (p) => {
+          const v = p.value;
+          if (!Array.isArray(v)) return '';
+          const m = cell[v[0] + ',' + v[1]] || { call: 0, put: 0 };
+          return `สไตรค์ ${strikes[v[0]]} · ${sessions[v[1]].date}`
+            + `<br/>OI รวม ${fmtInt(v[2])} สัญญา`
+            + `<br/>Call ${fmtInt(m.call)} · Put ${fmtInt(m.put)}`;
+        },
+      },
+      /* สเกลไล่สีขับด้วยมิติที่ 3 (ดุลฝั่ง) ไม่ใช่ความสูง —
+         คำอธิบายสีวาดเองใน .legend จึงซ่อนตัวควบคุมของ ECharts */
+      visualMap: {
+        show: false,
+        dimension: 3,
+        min: -1,
+        max: 1,
+        inRange: { color: [COLOR.call, NEUTRAL, COLOR.put] },
+      },
+      xAxis3D: {
+        ...axisCommon,
+        type: 'category',
+        name: 'สไตรค์',
+        data: strikes.map(String),
+        axisLabel: {
+          color: COLOR.textLabel, fontSize: 12, fontFamily: MONO_FONT,
+          interval: Math.ceil(strikes.length / 10),
+        },
+      },
+      yAxis3D: {
+        ...axisCommon,
+        type: 'category',
+        name: 'วันทำการ',
+        data: dates,
+        axisLabel: {
+          color: COLOR.textLabel, fontSize: 12, fontFamily: MONO_FONT,
+          interval: Math.ceil(dates.length / 7),
+        },
+      },
+      zAxis3D: {
+        ...axisCommon,
+        type: 'value',
+        name: 'OI',
+        max: maxTotal * 1.26,
+        axisLabel: { color: COLOR.textMuted, fontSize: 12, fontFamily: MONO_FONT, formatter: fmtK },
+      },
+      grid3D: {
+        boxWidth: box.w,
+        boxDepth: box.d,
+        boxHeight: box.h,
+        environment: 'transparent',
+        axisPointer: { show: false },
+        /* แสงมาจากบนซ้ายเหมือนเงาการ์ดทุกใบในหน้านี้ */
+        light: {
+          main: { intensity: 1.35, shadow: true, shadowQuality: 'medium', alpha: 42, beta: 32 },
+          ambient: { intensity: 0.42 },
+        },
+        viewControl: {
+          projection: 'perspective',
+          alpha: 28,          // ก้มลงมาพอเห็นสันกำแพง แต่ยังอ่านแกนสไตรค์ออก
+          beta: 30,
+          distance: box.dist,
+          minDistance: 90,
+          maxDistance: 400,
+          autoRotate: false,
+          damping: 0.82,
+          rotateSensitivity: 1.1,
+          zoomSensitivity: 1.1,
+          animation: !REDUCED_MOTION,
+        },
+      },
+      series: [
+        {
+          type: 'bar3D',
+          name: 'OI รวม',
+          data,
+          shading: 'lambert',
+          barSize: strikes.length > 20 ? 5 : 7,
+          bevelSize: 0.18,
+          bevelSmoothness: 2,
+          emphasis: {
+            label: { show: false },
+            itemStyle: { color: COLOR.textPrimary },
+          },
+          animationDurationUpdate: REDUCED_MOTION ? 0 : 500,
+        },
+        ...marks,
+      ],
+    }, true);
+
+    state.oi3dChart.resize();
+  }
+
+  function hideOrbitHint() {
+    const h = $('orbit-hint');
+    if (h) h.classList.add('gone');
+  }
+
+  /* คำอธิบายสี: 2 มิติเป็นแท่งสองสี, 3 มิติเป็นแถบไล่สีบอกดุลฝั่ง */
+  function renderOiLegend() {
+    const box = $('oi-legend');
+    box.textContent = '';
+    const key = (color, text) => {
+      const k = document.createElement('span');
+      k.className = 'key';
+      const sw = document.createElement('span');
+      sw.className = 'swatch';
+      sw.style.background = color;
+      k.appendChild(sw);
+      k.appendChild(document.createTextNode(text));
+      return k;
+    };
+    if (state.view === '2d') {
+      box.appendChild(key(COLOR.call, 'Call OI'));
+      box.appendChild(key(COLOR.put, 'Put OI'));
+    } else {
+      const k = document.createElement('span');
+      k.className = 'key';
+      k.appendChild(document.createTextNode('Call ถือมากกว่า'));
+      const sw = document.createElement('span');
+      sw.className = 'swatch scale';
+      sw.style.background =
+        `linear-gradient(90deg, ${COLOR.call}, ${NEUTRAL}, ${COLOR.put})`;
+      k.appendChild(sw);
+      k.appendChild(document.createTextNode('Put ถือมากกว่า'));
+      box.appendChild(k);
+    }
+  }
+
+  function updateOiHint() {
+    const spot = M.num(state.data && state.data.spot);
+    $('oi-hint').textContent = state.view === '3d'
+      ? `ความสูง = OI รวมของสไตรค์นั้นในวันนั้น · สีบอกว่าฝั่งไหนถือครองมากกว่า · `
+        + `ป้ายลอยชี้ตำแหน่ง Spot ${fmt(spot)} และ Max Pain ${fmtInt(state.maxPain)} บนแกนสไตรค์ · `
+        + `ลากเพื่อหมุน ชี้ที่แท่งเพื่อล็อกสไตรค์`
+      : `แท่ง Call/Put ของวันล่าสุด · เส้นตั้ง: Spot ${fmt(spot)} และ Max Pain ${fmtInt(state.maxPain)} · `
+        + `แตะ/ชี้แท่งเพื่อดูตัวเลข`;
+  }
+
+  /* ============================================================
+     focus bus — สไตรค์ที่ "กำลังดู" มีตัวเดียวทั้งหน้า
+     ชี้ที่กราฟ 3 มิติ, กราฟ 2 มิติ หรือแถวในตารางก็เรียกตัวนี้เหมือนกัน
+     ============================================================ */
+  function setFocus(strike) {
+    const k = Number(strike);
+    if (!isFinite(k) || !state.strikes.includes(k)) return;
+    if (state.focus === k) return;
+    state.focus = k;
+
+    const sd = state.data.series[state.seriesName] || {};
+    const row = sd[String(k)] || {};
+    const c = state.chg1[String(k)] || {};
+
+    $('focus-bar').classList.add('on');
+    $('focus-strike').textContent = String(k);
+    $('focus-coi').textContent = fmtInt(M.num(row.callOI));
+    $('focus-poi').textContent = fmtInt(M.num(row.putOI));
+
+    /* ΔOI รวมสองฝั่ง — ถ้าไม่มี history เลยจะเป็น '–' ไม่ใช่ 0 */
+    const dc = M.num(c.call), dp = M.num(c.put);
+    const chgEl = $('focus-chg');
+    if (dc === null && dp === null) {
+      chgEl.textContent = '–';
+      chgEl.className = '';
+    } else {
+      const tot = M.numOr0(dc) + M.numOr0(dp);
+      chgEl.textContent = fmtSigned(tot);
+      chgEl.className = tot > 0 ? 'up' : tot < 0 ? 'down' : '';
+    }
+
+    $('focus-iv').textContent =
+      `${fmt(M.num(row.callIV))} / ${fmt(M.num(row.putIV))}`;
+
+    /* ป้าย ATM / MAX PAIN ตรงกับที่ติดในตาราง */
+    const tag = $('focus-tag');
+    const label = k === state.atm && k === state.maxPain ? 'ATM · MAX PAIN'
+      : k === state.atm ? 'ATM'
+      : k === state.maxPain ? 'MAX PAIN' : '';
+    tag.textContent = label;
+    tag.hidden = !label;
+
+    /* ไฮไลต์แถวในตารางให้ตรงกัน */
+    document.querySelectorAll('#strike-table tbody tr').forEach((tr) => {
+      tr.classList.toggle('focused', Number(tr.dataset.strike) === k);
+    });
+
+    /* ไฮไลต์แท่งในกราฟ 2 มิติ (ECharts จัดการ downplay ตัวเก่าให้เอง) */
+    if (state.oiChart) {
+      const i = state.strikes.indexOf(k);
+      state.oiChart.dispatchAction({ type: 'downplay', seriesIndex: [0, 1] });
+      if (i >= 0) {
+        state.oiChart.dispatchAction({ type: 'highlight', seriesIndex: [0, 1], dataIndex: i });
+      }
+    }
+  }
+
+  /* ลูกศรซ้าย/ขวาเลื่อนสไตรค์ทีละขั้น, Home/End ไปหัว-ท้ายกระดาน */
+  function bindFocusKeys() {
+    $('focus-bar').addEventListener('keydown', (e) => {
+      const ks = state.strikes;
+      if (!ks.length) return;
+      const i = ks.indexOf(state.focus);
+      let next = null;
+      if (e.key === 'ArrowLeft') next = ks[Math.max(0, i - 1)];
+      else if (e.key === 'ArrowRight') next = ks[Math.min(ks.length - 1, i + 1)];
+      else if (e.key === 'Home') next = ks[0];
+      else if (e.key === 'End') next = ks[ks.length - 1];
+      if (next === null) return;
+      e.preventDefault();
+      setFocus(next);
+    });
+  }
+
+  /* ============================================================
+     กราฟ 2 มิติ: OI รายสไตรค์ + เส้น Spot + เส้น Max Pain
      ============================================================ */
 
   /* ตำแหน่งของ "ราคา" บนแกนสไตรค์ (category) แบบ fractional index
@@ -492,10 +1012,9 @@
     const callData = strikes.map((k) => M.num(sd[String(k)].callOI));
     const putData = strikes.map((k) => M.num(sd[String(k)].putOI));
 
-    $('oi-hint').textContent =
-      `เส้นตั้ง: Spot ${fmt(spot)} และ Max Pain ${fmtInt(maxPain)} · แตะ/ชี้แท่งเพื่อดูตัวเลข`;
+    updateOiHint();
 
-    /* เส้นตั้ง Spot (ทึบ) + Max Pain (ประ) — สไตล์ตามไฟล์ดีไซน์ */
+    /* เส้นตั้ง Spot (ทึบ) + Max Pain (ประ) */
     const markLineData = [];
     const spotIdx = fractionalIndex(strikes, spot);
     if (spotIdx !== null) {
@@ -511,19 +1030,23 @@
     if (maxPain !== null) {
       markLineData.push({
         xAxis: fractionalIndex(strikes, maxPain),
-        lineStyle: { color: COLOR.textMuted, width: 1.5, type: 'dashed' },
+        lineStyle: { color: COLOR.put, width: 1.5, type: 'dashed' },
         label: {
           formatter: `Max Pain ${fmtInt(maxPain)}`, color: COLOR.textSecondary,
           backgroundColor: COLOR.surfaceRaise, padding: 5, borderRadius: 6, fontSize: 11,
           /* Spot กับ Max Pain มักอยู่ใกล้กัน — ดันป้ายนี้ต่ำลงมา
-             ให้คนละระดับกับป้าย Spot (ตำแหน่ง inside จะหมุนป้ายตามเส้น
-             เลยใช้ offset แทน — ป้ายยังแนวนอนอ่านง่าย) */
+             ให้คนละระดับกับป้าย Spot */
           offset: [0, 26],
         },
       });
     }
 
-    if (!state.oiChart) state.oiChart = echarts.init($('chart-oi'));
+    if (!state.oiChart) {
+      state.oiChart = echarts.init($('chart-oi'));
+      state.oiChart.on('mouseover', (p) => {
+        if (typeof p.dataIndex === 'number') setFocus(state.strikes[p.dataIndex]);
+      });
+    }
     state.oiChart.setOption({
       ...baseOption(),
       grid: { left: 8, right: 16, top: 24, bottom: 8, containLabel: true },
@@ -537,7 +1060,7 @@
         },
       },
       xAxis: strikeAxis(strikes),
-      yAxis: valueAxis((v) => (v >= 1000 ? v / 1000 + 'K' : v)),
+      yAxis: valueAxis(fmtK),
       series: [
         {
           name: 'Call OI', type: 'bar', data: callData,
@@ -739,8 +1262,7 @@
           /* ขอบแกนเป็นค่าที่ยืดออกมา (ไม่ใช่เลขกลมๆ) — ไม่ต้องโชว์ */
           showMinLabel: false,
           showMaxLabel: false,
-          formatter: (v) =>
-            (v > 0 ? '+' : '') + (Math.abs(v) >= 1000 ? v / 1000 + 'K' : v),
+          formatter: (v) => (v > 0 ? '+' : '') + fmtK(v),
         },
       },
       yAxis: {
@@ -771,7 +1293,6 @@
      กราฟ IV Smile: เส้น IV เฉลี่ย Call/Put ต่อสไตรค์ เทียบ 2 ซีรีส์
      ------------------------------------------------------------
      - ไม่ตาม series picker: ประเด็นคือเทียบโครงสร้าง IV ข้ามอายุสัญญา
-       (cross-section ของ IV surface บนข้อมูลจริงที่มี 2 maturity)
      - ข้อมูล EOD ไม่เปลี่ยนระหว่างเปิดหน้า — วาดครั้งเดียวพอ
      - ซีรีส์ไกลใช้เส้นประ: แยกเส้นได้แม้ไม่เห็นสี (CVD/พิมพ์ขาวดำ)
      ============================================================ */
@@ -779,7 +1300,6 @@
     if (!FEATURES.ivSmile) return; // พักไว้พัฒนาต่อ
     if (state.ivChart) return;
     const d = state.data;
-    /* สีรองรับ 2 ซีรีส์ — ใช้ 2 ซีรีส์ใกล้สุด (ไกลกว่านั้นสภาพคล่องต่ำ) */
     const names = Object.keys(d.series).slice(0, 2);
     const lineColors = [COLOR.seriesNear, COLOR.seriesFar];
     const spot = M.num(d.spot);
@@ -789,7 +1309,6 @@
     for (const n of names) for (const k of M.strikesOf(d.series[n])) set.add(k);
     const strikes = [...set].sort((a, b) => a - b);
 
-    /* เส้น Spot ปักที่สไตรค์ใกล้สุด (ตามไฟล์ดีไซน์) */
     const spotIdx = strikes.length && spot !== null
       ? strikes.reduce((best, s, i) =>
           (Math.abs(s - spot) < Math.abs(strikes[best] - spot) ? i : best), 0)
@@ -808,7 +1327,7 @@
       connectNulls: false, // สไตรค์ที่ไม่มี IV ให้ขาดจริง ไม่ลากเส้นหลอก
       smooth: 0.2,
       animationDuration: 900,
-      animationDelay: (idx) => 200 + idx * 22, // จุดทยอยโผล่ซ้าย→ขวา
+      animationDelay: (idx) => 200 + idx * 22,
       markLine: i === 0 && spotIdx !== null ? {
         silent: true, symbol: 'none',
         lineStyle: { color: COLOR.textSecondary, width: 1 },
@@ -843,7 +1362,7 @@
         },
       },
       xAxis: strikeAxis(strikes),
-      yAxis: { ...valueAxis('{value}%'), scale: true }, // ไม่บังคับเริ่มที่ 0 — เส้นอ่านจากตำแหน่ง
+      yAxis: { ...valueAxis('{value}%'), scale: true }, // ไม่บังคับเริ่มที่ 0
       series,
     }, true);
   }
@@ -866,6 +1385,7 @@
       const row = sd[String(k)] || {};
       const c = chg1[String(k)] || { call: null, put: null };
       const tr = document.createElement('tr');
+      tr.dataset.strike = String(k);
       if (k === atm) tr.classList.add('atm');
       if (k === maxPain) tr.classList.add('mp');
 
@@ -880,6 +1400,13 @@
         `${fmt(M.num(row.callIV))} / ${fmt(M.num(row.putIV))}`));
       tbody.appendChild(tr);
     }
+
+    /* ชี้แถวไหน = ล็อกสไตรค์นั้นทั้งหน้า (ผูกที่ tbody ครั้งเดียว
+       ไม่ต้องผูกทีละแถว — ตารางถูกสร้างใหม่ทุกครั้งที่เปลี่ยนซีรีส์) */
+    tbody.addEventListener('mouseover', (e) => {
+      const tr = e.target.closest('tr');
+      if (tr && tr.dataset.strike) setFocus(tr.dataset.strike);
+    });
 
     function td(text) {
       const el = document.createElement('td');

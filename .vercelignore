@@ -1,0 +1,7 @@
+# Vercel deploy เฉพาะไฟล์ที่เว็บใช้จริง — ที่เหลือไม่ต้องอัปโหลด
+scraper/
+tools/
+.github/
+.venv/
+__pycache__/
+*.md
