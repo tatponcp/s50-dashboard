@@ -855,7 +855,13 @@
           name: 'OI รวม',
           data,
           shading: 'lambert',
-          barSize: strikes.length > 20 ? 5 : 7,
+          /* ขนาดแท่งคิดจากระยะห่างจริงของช่องในกล่อง (ทั้งสองแกน) —
+             ค่าคงที่จะทำให้แท่งเชื่อมติดกันเป็นสันยาวตอนเลือก 20 วัน
+             จนแยกไม่ออกว่าวันไหนต่อวันไหน */
+          barSize: [
+            (box.w / strikes.length) * 0.72,
+            (box.d / dates.length) * 0.72,
+          ],
           bevelSize: 0.18,
           bevelSmoothness: 2,
           emphasis: {
